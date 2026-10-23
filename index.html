@@ -42,12 +42,14 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 .tr{flex:1;height:22px;background:var(--hd);border-radius:6px;overflow:hidden;display:flex}.tr i{display:block;height:100%;background:var(--pri);color:#2b3445;font-size:11px;font-style:normal;text-align:center;line-height:22px}
 .lg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px}.lg u{display:inline-block;width:12px;height:12px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
 #toast{position:fixed;inset:auto 14px calc(18px + env(safe-area-inset-bottom,0px)) 14px;margin:auto;max-width:520px;padding:12px 14px;border-radius:10px;background:#ffe6e6;color:#b4232a;border:1px solid #f3b9b9;font-weight:700;text-align:center;display:none;box-shadow:0 4px 18px #0002;z-index:9}
+#gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}#gate form{width:100%;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:10px;padding:22px}#gate input{text-align:center;font-size:17px;padding:10px}#gate button{padding:10px;font-size:16px}
 </style></head>
 <body>
 <header><h1>📊 تحليل نتائج المرحلة الثانوية</h1>
 <div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
 <label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span></div></header>
 <nav id="tabs"></nav><main id="app"></main><div id="toast"></div>
+<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">تحليل نتائج المرحلة الثانوية</h2><p class="mut">أدخلي رمز الدخول الخاص بالمدرسة</p><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -60,7 +62,8 @@ const st={y:"1448",g:1,t:1,p:1,v:"sum"},PN=["","الفترة الأولى","ال
 let docs={},db=null,dl=null,timers={},tt;
 const kk=(g,t,p,i)=>p==3?`${st.y}_g${g}_t${t}_s${i}`:`${st.y}_g${g}_t${t}_p${p}_s${i}`;
 const key=(i,p=st.p)=>kk(st.g,st.t,p,i);
-function getDoc(i){const d=docs[key(i)];if(d&&d.name)return d;for(const q of [1,2,3]){const o=docs[key(i,q)];if(o&&o.name)return {...(d||blank()),name:o.name,teacher:(d&&d.teacher)||o.teacher};}return d||blank();}
+const MATH="الرياضيات";function getDoc(i){const d=getDoc0(i);return i==1&&d.name!==MATH?{...d,name:MATH}:d;}
+function getDoc0(i){const d=docs[key(i)];if(d&&d.name)return d;for(const q of [1,2,3]){const o=docs[key(i,q)];if(o&&o.name)return {...(d||blank()),name:o.name,teacher:(d&&d.teacher)||o.teacher};}return d||blank();}
 const blank=()=>({name:"",teacher:"",total:0,avg:"",sc:JSON.stringify(Array.from({length:NC},()=>Array(NR).fill("")))});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const nz=s=>String(s).replace(/[٠-٩]/g,d=>d.charCodeAt(0)-1632).replace(/[۰-۹]/g,d=>d.charCodeAt(0)-1776).replace(/[٫,]/g,".").trim();
@@ -97,7 +100,7 @@ function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}"
  for(let i=1;i<=NS;i++){const d=getDoc(i);h+=`<button data-v="${i}" class="${st.v==i?"on":""}">${esc(d&&d.name)||"مادة "+i}</button>`;}$("#tabs").innerHTML=h;}
 function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():renderSubj(+st.v);}
 function renderSubj(i){const d=getDoc(i),sc=JSON.parse(d.sc);
- let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" value="${esc(d.name)}"></label><label>اسم المعلمة<input data-f="teacher" value="${esc(d.teacher)}"></label>
+ let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" value="${esc(d.name)}" ${i==1?'readonly title="مادة مثبتة" style="background:var(--hd);font-weight:700"':''}></label><label>اسم المعلمة<input data-f="teacher" value="${esc(d.teacher)}"></label>
  <label>عدد الطالبات الكلي<input data-f="total" type="number" min="0" max="125" value="${d.total||""}"></label>
  <label>الدرجة الكاملة للمادة<input data-f="fm" list="fml" type="number" min="1" max="1000" step="any" placeholder="${defFM(st.p)}" value="${d.fm||""}"><datalist id="fml"><option value="20"><option value="30"><option value="40"><option value="10"><option value="50"></datalist></label><label>متوسط الدرجات من 100<input data-f="avg" type="number" min="0" max="100" step="any" value="${esc(d.avg)}"></label></div>
  <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p>${exportBar()}</div>
@@ -131,7 +134,7 @@ function renderCmp(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d
  $("#app").innerHTML=h;}
 function legend(){return `<div class="card"><b>معايير التقدير</b><table style="margin-top:8px"><tr><th>التقدير</th><th>النسبة</th><th>مثال: من 20</th><th>مثال: من 40</th></tr>${BN.map((n,k)=>{const P=["90% فأكثر","80% - أقل من 90%","75% - أقل من 80%","70% - أقل من 75%","50% - أقل من 70%","أقل من 50%"][k],R=f=>{const b=bands(f);return k==0?`${b[0]} - ${f}`:k==5?`أقل من ${b[4]}`:`${b[k]} - أقل من ${b[k-1]}`};return `<tr><td>${n}</td><td>${P}</td><td>${R(20)}</td><td>${R(40)}</td></tr>`}).join("")}</table>
  <p class="mut">نسبة الحاصلات = عدد الحاصلات في التقدير ÷ عدد الطالبات الكلي. نسبة الضعف النوعي = (جيد + مقبول + ضعيف). الانحراف المعياري للعينة. الحدود بنسب ثابتة من الدرجة الكاملة (90% و80% و75% و70% و50%)، وتتغير تلقائيًا مع الفترة (فترة 1 وفترة 2 من 20، والنهائي من 40).</p></div>`;}
-function sched(id){clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
+function sched(id){if(/_s1$/.test(id)&&docs[id])docs[id].name=MATH;clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
  try{if(db)await db.doc("results/"+id).set(docs[id]);else localStorage.setItem("res_"+id,JSON.stringify(docs[id]));flash("تم الحفظ ✓");}catch(e){flash("تعذر الحفظ");}},700);}
 const app=$("#app");
 app.addEventListener("input",e=>{const el=e.target,i=+st.v;if(!i)return;
@@ -170,13 +173,26 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
 app.addEventListener("click",e=>{const x=e.target.dataset.x;if(x)doExport(x);});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const D=b.dataset;
  if(D.g)st.g=+D.g;else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
-$("#yr").addEventListener("change",e=>{st.y=e.target.value.trim()||"1448";renderBars();renderView();});
-renderBars();renderView();
-(async()=>{const c=window.claude;
- try{if(c){db=await c.use("db");dl=await c.use("downloads");}}catch(e){}
- if(!(app.contains(document.activeElement)&&document.activeElement.tagName==="INPUT"))renderView();
- if(db){db.collection("results").onSnapshot(s=>{let cur=false;s.docs.forEach(x=>{if(timers[x.id]||((x.id===key(st.v)||x.id===secKey(st.g))&&app.contains(document.activeElement)&&document.activeElement.tagName==="INPUT"))return;const n=x.data();if(JSON.stringify(docs[x.id])!==JSON.stringify(n)){docs[x.id]=n;if(x.id===key(st.v)||x.id===secKey(st.g))cur=true;}});
-   renderTabs();if(st.v==="sum"||cur)renderView();flash("");},()=>flash("تعذر الاتصال بالقاعدة"));}
- else{try{for(const k of Object.keys(localStorage))if(k.startsWith("res_"))docs[k.slice(4)]=JSON.parse(localStorage.getItem(k));}catch(e){}renderTabs();renderView();flash("حفظ محلي على هذا الجهاز فقط");}
-})();
+$("#yr").addEventListener("change",e=>{st.y=nz(e.target.value).replace(/\D/g,"")||"1448";e.target.value=st.y;renderBars();renderView();});
+const SB="https://geruvshyzwgjcmcakpfs.supabase.co",SK="sb_publishable_NSbjHh8mhylyHBDc6i5-GA_wvvE54gn";
+let CODE="",last=null,polling=null;try{CODE=localStorage.getItem("ra_code")||"";}catch(e){}
+async function rpc(fn,body){const r=await fetch(SB+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:SK,"Content-Type":"application/json"},body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(t.includes("bad_code")?"bad_code":"net");return t?JSON.parse(t):null;}
+const typing=()=>app.contains(document.activeElement)&&document.activeElement.tagName==="INPUT";
+async function pull(){const rs=await rpc("ra_get",{c:CODE,since:last});let cur=false,any=false;
+ (rs||[]).forEach(x=>{if(!last||x.updated_at>last)last=x.updated_at;if(timers[x.id]||((x.id===key(st.v)||x.id===secKey(st.g))&&typing()))return;
+  if(JSON.stringify(docs[x.id])!==JSON.stringify(x.data)){docs[x.id]=x.data;any=true;if(x.id===key(st.v)||x.id===secKey(st.g))cur=true;}});
+ if(any){renderTabs();if((st.v==="sum"||st.v==="cmp"||cur)&&!typing())renderView();}}
+dl={save:async({filename,data})=>{const b=data instanceof Blob?data:new Blob([data]);const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}};
+function gate(msg){const g=$("#gate");g.style.display="flex";$("#gm").textContent=msg||"";$("#gc").value="";setTimeout(()=>$("#gc").focus(),50);}
+async function start(){if(!CODE)return gate();flash("جارٍ التحقق…");
+ try{if(!(await rpc("ra_check",{c:CODE})))return gate("رمز الدخول غير صحيح");}catch(e){flash("تعذر الاتصال بالقاعدة — تأكدي من الإنترنت");setTimeout(start,8000);return;}
+ $("#gate").style.display="none";db={doc:p=>({set:d=>rpc("ra_save",{c:CODE,p_id:p.slice(8),p_data:d})})};
+ flash("جارٍ تحميل البيانات…");try{await pull();flash("البيانات محفوظة على الإنترنت ✓");}catch(e){flash("تعذر تحميل البيانات");}
+ renderTabs();if(!typing())renderView();
+ clearInterval(polling);polling=setInterval(()=>pull().catch(()=>flash("تعذر الاتصال بالقاعدة")),15000);
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull().catch(()=>{});});}
+$("#gf").addEventListener("submit",async e=>{e.preventDefault();const v=nz($("#gc").value).toLowerCase();if(!v)return;$("#gm").textContent="جارٍ التحقق…";
+ try{if(await rpc("ra_check",{c:v})){CODE=v;try{localStorage.setItem("ra_code",v);}catch(x){}start();}else $("#gm").textContent="رمز الدخول غير صحيح";}catch(x){$("#gm").textContent="تعذر الاتصال، حاولي مرة أخرى";}});
+window.addEventListener("beforeunload",e=>{if(Object.keys(timers).length){e.preventDefault();e.returnValue="";}});
+renderBars();renderView();start();
 </script></body></html>
