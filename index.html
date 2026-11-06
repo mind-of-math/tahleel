@@ -132,7 +132,7 @@ function renderSubj(i){let d=getDoc(i);if(!d.teacher&&d.name){const a=autoTeache
  <datalist id="subjl">${subjList().map(s=>`<option value="${esc(s)}">`).join("")}</datalist><datalist id="tchl">${[...new Set(tl2)].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
  <label>عدد الطالبات الكلي<input data-f="total" type="number" min="0" max="125" value="${d.total||""}"></label>
  <label>الدرجة الكاملة للمادة<input data-f="fm" list="fml" type="number" min="1" max="1000" step="any" placeholder="${defFM(st.p)}" value="${d.fm||""}"><datalist id="fml"><option value="20"><option value="30"><option value="40"><option value="10"><option value="50"></datalist></label><label>متوسط الدرجات من 100<input data-f="avg" type="number" min="0" max="100" step="any" value="${esc(d.avg)}"></label></div>
- <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p>${exportBar()}</div>
+ <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p><p class="xb" style="margin-top:0">${exportBar().replace(/^<p class="xb">|<\/p>$/g,"")}<span class="sep"></span><button type="button" data-clr="1" style="border-color:#f3b9b9;color:var(--bt);background:var(--bad)">🗑 مسح الدرجات</button></p><p class="mut" style="background:var(--hd);border-radius:8px;padding:8px 10px;margin:8px 0 0">📋 للصق مجموعة درجات: انسخيها من Excel أو من كشف، ثم اضغطي على أول خانة والصقيها، فتتوزع على الخانات تحتها وبجانبها.</p></div>
  <div class="wrap2"><div class="card sc"><table class="g"><thead><tr><th>م</th>${Array.from({length:NC},(_,c)=>`<th><input class="sn" data-sn="${c}" value="${esc(secName(st.g,c))}" title="اضغطي لتعديل اسم الفصل"></th>`).join("")}</tr></thead><tbody>`;
  for(let r=0;r<NR;r++){h+=`<tr><td>${r+1}</td>`;for(let c=0;c<NC;c++){const x=sc[c][r];h+=`<td><input class="${chk(x,docFM(d))?"bad":""}" inputmode="decimal" data-c="${c}" data-r="${r}" value="${esc(x)}"></td>`;}h+="</tr>";}
  $("#app").innerHTML=h+`</tbody></table></div><div class="card" id="stats">${statsHtml(d)}</div></div>`;}
@@ -210,6 +210,19 @@ app.addEventListener("input",e=>{const el=e.target,i=+st.v;if(st.v==="tch"){if(e
  else if(el.dataset.c!==undefined){const sc=JSON.parse(d.sc);sc[el.dataset.c][el.dataset.r]=el.value;d.sc=JSON.stringify(sc);
   const m=chk(el.value,docFM(d));el.classList.toggle("bad",!!m);if(m)toast(m);}
  else return;$("#stats").innerHTML=statsHtml(d);sched(id);});
+
+app.addEventListener("click",e=>{const b=e.target.closest("[data-clr]");if(!b)return;const i=+st.v;if(!i)return;const id=key(i),d=docs[id];
+ if(!d||!JSON.parse(d.sc).some(c=>c.some(x=>nz(x)!==""))){toast("لا توجد درجات لمسحها");return;}
+ if(!confirm(`مسح كل درجات «${getDoc(i).name||"المادة"}» في ${PN[st.p]}؟\nتبقى بيانات المادة الأخرى والفترات الأخرى كما هي.`))return;
+ d.sc=blank().sc;sched(id);renderSubj(i);});
+app.addEventListener("paste",e=>{const el=e.target;if(el.dataset.c===undefined)return;const i=+st.v;if(!i)return;
+ const txt=(e.clipboardData||window.clipboardData).getData("text");if(!/[\t\n]/.test(txt.trim()))return;e.preventDefault();
+ const rows=txt.replace(/\r/g,"").replace(/\n+$/,"").split("\n").map(r=>r.split("\t"));
+ const id=key(i),d=docs[id]=docs[id]||{...blank(),name:getDoc(i).name,teacher:getDoc(i).teacher},sc=JSON.parse(d.sc),c0=+el.dataset.c,r0=+el.dataset.r,fm=docFM(d);let lost=0,n=0;
+ rows.forEach((row,ri)=>row.forEach((v,ci)=>{const r=r0+ri,c=c0+ci;v=v.trim();if(r>=NR||c>=NC){if(v)lost++;return;}sc[c][r]=v;n++;
+  const inp=document.querySelector(`[data-c="${c}"][data-r="${r}"]`);if(inp){inp.value=v;inp.classList.toggle("bad",!!chk(v,fm));}}));
+ d.sc=JSON.stringify(sc);$("#stats").innerHTML=statsHtml(d);sched(id);
+ if(lost)toast(`لُصقت ${n} خانة، وتجاوزت ${lost} قيمة حدود الجدول فلم تُلصق`);else flash(`تم لصق ${n} خانة ✓`);});
 app.addEventListener("keydown",e=>{const t=e.target;if(t.dataset.c===undefined)return;let c=+t.dataset.c,r=+t.dataset.r;const k=e.key;
  if(k==="Enter"||k==="ArrowDown")r++;else if(k==="ArrowUp")r--;else if(k==="ArrowRight")c--;else if(k==="ArrowLeft")c++;else return;
  e.preventDefault();const n=document.querySelector(`[data-c="${c}"][data-r="${r}"]`);if(n){n.focus();n.select();}});
