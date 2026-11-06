@@ -83,7 +83,7 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const nz=s=>String(s).replace(/[٠-٩]/g,d=>d.charCodeAt(0)-1632).replace(/[۰-۹]/g,d=>d.charCodeAt(0)-1776).replace(/[٫,]/g,".").trim();
 const chk=(s,fm)=>{s=nz(s);if(s==="")return"";const n=Number(s);if(!isFinite(n))return"القيمة غير رقمية، أدخلي رقمًا فقط";if(n<0)return"الدرجة لا يمكن أن تكون سالبة";if(n>fm)return`الدرجة ${n} أكبر من الدرجة الكاملة (${fm})`;return"";};
 const f2=x=>x===""?"":(+x).toFixed(2),pc=x=>x===""?"":(x*100).toFixed(2)+"%";
-function calc(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);const v=[];let bad=0;JSON.parse(d.sc).slice(0,NC).forEach(c=>c.slice(0,NR).forEach(x=>{if(nz(x)==="")return;if(chk(x,fm))bad++;else v.push(Number(nz(x)));}));
+function calc(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);const v=[];let bad=0;JSON.parse(d.sc).slice(0,NC).forEach(c=>c.slice(0,d._m?1e4:NR).forEach(x=>{if(nz(x)==="")return;if(chk(x,fm))bad++;else v.push(Number(nz(x)));}));
  const t=+d.total||0,n=v.length,r={n,bad,t,fm};r.full=v.filter(x=>x===fm).length;r.max=n?Math.max(...v):"";r.min=n?Math.min(...v):"";
  r.cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);r.pct=r.cnt.map(c=>t?c/t:"");
  const m=n?v.reduce((a,b)=>a+b,0)/n:"";r.mean=m;r.mp=n?m/fm:"";r.sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(n-1)):"";
@@ -95,7 +95,7 @@ const rows=fm=>[["عدد الطالبات المختبرات (حسب الدرج�
  [`متوسط درجات الاختبار${fm?` من ${fm}`:""}`,r=>f2(r.mean),1],[`النسبة المئوية للمتوسط${fm?` من ${fm}`:" من الدرجة الكاملة"}`,r=>pc(r.mp),1]];
 const secKey=g=>`${PF()}${st.y}_g${g}_secs`;
 const secName=(g,c)=>{try{return JSON.parse(docs[secKey(g)].sn)[c]||"فصل "+(c+1);}catch(e){return"فصل "+(c+1);}};
-function secStats(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);return JSON.parse(d.sc).slice(0,NC).map(col=>{const v=[];col.slice(0,NR).forEach(x=>{if(nz(x)!==""&&!chk(x,fm))v.push(Number(nz(x)));});
+function secStats(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);return JSON.parse(d.sc).slice(0,NC).map(col=>{const v=[];col.slice(0,d._m?1e4:NR).forEach(x=>{if(nz(x)!==""&&!chk(x,fm))v.push(Number(nz(x)));});
  const n=v.length,m=n?v.reduce((a,b)=>a+b,0)/n:"",cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);
  return{n,mean:m,mp:n?m/fm:"",ex:n?cnt[0]/n:"",weak:n?(cnt[3]+cnt[4]+cnt[5])/n:"",max:n?Math.max(...v):"",min:n?Math.min(...v):""};});}
 function secCmpHtml(d){const S=secStats(d);if(!S.some(x=>x.n))return"";const best=Math.max(...S.filter(x=>x.n).map(x=>x.mp));
@@ -103,7 +103,7 @@ function secCmpHtml(d){const S=secStats(d);if(!S.some(x=>x.n))return"";const bes
 function secMatrix(cols){const M=cols.map(([d])=>secStats(d)),used=[...Array(NC).keys()].filter(c=>M.some(m=>m[c].n));if(!used.length)return"";
  const A=used.map(c=>{const v=M.map(m=>m[c].mp).filter(x=>x!=="");return v.length?v.reduce((a,b)=>a+b,0)/v.length:"";}),best=Math.max(...A.filter(x=>x!==""));
  return `<div class="card"><b>مقارنة الفصول بين المواد — ${GN[st.g]}</b> <span class="mut">(النسبة المئوية لمتوسط كل فصل في كل مادة)</span><div class="sum"><table><tr><th>المادة</th>${used.map(c=>`<th>${esc(secName(st.g,c))}</th>`).join("")}</tr>${cols.map(([d],j)=>`<tr><td>${esc(d.name)}</td>${used.map(c=>`<td>${pc(M[j][c].mp)}</td>`).join("")}</tr>`).join("")}<tr><th>متوسط الفصل في كل المواد</th>${A.map(x=>`<th class="${x!==""&&x===best?"bst":""}">${pc(x)}</th>`).join("")}</tr></table></div><p class="mut">يُحسب متوسط كل فصل من درجات طالباته في كل مادة، وتُقارَن الفصول بالنسبة المئوية لتكون المقارنة عادلة بين المواد.</p></div>`;}
-function statsHtml(d){const r=calc(d);return `<table class="st">`+rows(r.fm).map(([l,f,k])=>`<tr class="${k?"k":""}"><th>${l}</th><td>${f(r)}</td></tr>`).join("")
+function statsHtml(d){const r=calc(d),G=d.name?groupDocs(i=>getDoc(i)).get(nrm(d.name)):null,sh=G&&G.length>1?`<p class="msg" style="background:var(--hd);color:var(--tx);font-weight:400;margin:0 0 10px">هذه المادة تُدرّسها ${G.length===2?"معلمتان":G.length+" معلمات"} في هذا الصف (${esc(G.map(x=>x.teacher||"بدون اسم").join("، "))})، وتُدمج نتائجهن في عمود واحد في صفحة النتائج. الإحصاءات هنا لدرجاتك أنتِ فقط.</p>`:"";return sh+`<table class="st">`+rows(r.fm).map(([l,f,k])=>`<tr class="${k?"k":""}"><th>${l}</th><td>${f(r)}</td></tr>`).join("")
  +`<tr class="k"><th>متوسط الدرجات لإجمالي النتيجة من 100</th><td>${esc(d.avg)}</td></tr></table><div class="msg ${r.msg[0]==="⚠"?"bad":""}">${r.msg||"أدخلي الدرجات ليظهر الفحص"}</div>${secCmpHtml(d)}`;}
 function flash(t){$("#status").textContent=t;}
 function toast(t){const e=$("#toast");e.textContent="⚠ "+t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500);}
@@ -114,7 +114,7 @@ function renderBars(){$("#ttl").textContent="📊 مُؤشِّر — تحليل 
  $("#tb").innerHTML=[1,2].map(t=>`<button data-t="${t}" class="${st.t==t?"on":""}">الفصل ${TN[t]}</button>`).join("");
  $("#pb").innerHTML=[1,2,3].map(q=>`<button data-p="${q}" class="${st.p==q?"on":""}">${["","فترة 1","فترة 2","نهائي"][q]}</button>`).join("");renderTabs();}
 function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}">📋 النتائج</button><button data-v="cmp" class="${st.v=="cmp"?"on":""}">📈 الرسوم والمقارنة</button><button data-v="tch" class="${st.v=="tch"?"on":""}">👩‍🏫 المعلمات</button>`;
- for(let i=1;i<=NS;i++){const d=getDoc(i);h+=`<button data-v="${i}" class="${st.v==i?"on":""}">${esc(d&&d.name)||"مادة "+i}</button>`;}$("#tabs").innerHTML=h;}
+ const G=groupDocs(i=>getDoc(i));for(let i=1;i<=NS;i++){const d=getDoc(i),dup=d.name&&G.get(nrm(d.name)).length>1;h+=`<button data-v="${i}" class="${st.v==i?"on":""}">${esc(d&&d.name)||"مادة "+i}${dup&&d.teacher?` <small>(${esc(d.teacher)})</small>`:""}</button>`;}$("#tabs").innerHTML=h;}
 function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():st.v==="tch"?renderTch():renderSubj(+st.v);}
 function renderTch(){const L=roster(),gr=SG[st.s].gr;
  let h=`<div class="card"><h3 style="margin-top:0">معلمات ${SG[st.s].n}</h3><p class="mut">تكتب مسؤولة المرحلة هنا اسم كل معلمة ومادتها والصفوف التي تدرّسها. بعدها يظهر اسم المعلمة تلقائيًا في صفحة المادة عند كتابة اسم المادة. تُحفظ تلقائيًا.</p>
@@ -136,7 +136,15 @@ function renderSubj(i){let d=getDoc(i);if(!d.teacher&&d.name){const a=autoTeache
  <div class="wrap2"><div class="card sc"><table class="g"><thead><tr><th>م</th>${Array.from({length:NC},(_,c)=>`<th><input class="sn" data-sn="${c}" value="${esc(secName(st.g,c))}" title="اضغطي لتعديل اسم الفصل"></th>`).join("")}</tr></thead><tbody>`;
  for(let r=0;r<NR;r++){h+=`<tr><td>${r+1}</td>`;for(let c=0;c<NC;c++){const x=sc[c][r];h+=`<td><input class="${chk(x,docFM(d))?"bad":""}" inputmode="decimal" data-c="${c}" data-r="${r}" value="${esc(x)}"></td>`;}h+="</tr>";}
  $("#app").innerHTML=h+`</tbody></table></div><div class="card" id="stats">${statsHtml(d)}</div></div>`;}
-function renderSum(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d.name)cols.push(d);}
+
+function mergeDocs(L,p=st.p){if(L.length===1)return L[0];const fm=docFM(L[0],p),sc=Array.from({length:NC},()=>[]);let bad=0;
+ L.forEach(d=>{const f=docFM(d,p);JSON.parse(d.sc).slice(0,NC).forEach((c,ci)=>c.slice(0,NR).forEach(x=>{if(nz(x)==="")return;if(chk(x,f)){sc[ci].push(x);return;}const v=Number(nz(x));sc[ci].push(f===fm?x:String(Math.round(v*fm/f*100)/100));}));});
+ const tch=[...new Set(L.map(d=>String(d.teacher||"").trim()).filter(Boolean))],tot=L.reduce((a,d)=>a+(+d.total||0),0);
+ const av=L.filter(d=>nz(d.avg)!==""&&isFinite(+nz(d.avg))),wt=av.reduce((a,d)=>a+(+d.total||1),0),avg=av.length?String(Math.round(av.reduce((a,d)=>a+(+nz(d.avg))*(+d.total||1),0)/wt*100)/100):"";
+ return{name:L[0].name,teacher:tch.join(" - "),total:tot,avg,fm:L[0].fm,sc:JSON.stringify(sc),_m:L.length};}
+function groupDocs(get){const g=new Map();for(let i=1;i<=NS;i++){const d=get(i);if(d&&d.name){const k=nrm(d.name);if(!g.has(k))g.set(k,[]);g.get(k).push(d);}}return g;}
+function subjCols(p=st.p){return[...groupDocs(i=>getDoc(i)).values()].map(L=>mergeDocs(L,p));}
+function renderSum(){const cols=subjCols();
  if(!cols.length){$("#app").innerHTML=`<div class="card">لا توجد مواد بعد. اختاري تبويب مادة وأدخلي اسمها ودرجاتها، وستظهر هنا تلقائيًا.</div>`+legend();return;}
  const rs=cols.map(d=>calc(d)),th=(a)=>`<th>${a}</th>`,td=(a)=>`<td>${a}</td>`;
  let h=`<div class="card sum"><h3 style="margin-top:0">بيان بتحليل نتائج الطالبات في ${PN[st.p]} للفصل الدراسي ${TN[st.t]} ${SG[st.s].l} للعام الدراسي ${esc(st.y)}ه، الصف: ${GN[st.g]}</h3><table id="sumt"><thead><tr>${th("المادة")}${cols.map(d=>th(esc(d.name))).join("")}</tr></thead><tbody>`;
@@ -165,13 +173,13 @@ function chartsHtml(cols,rs){const T=cols.map((d,j)=>[d,rs[j]]).filter(([d,r])=>
  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">${pie}<div>${lg}<div class="mut" style="font-size:11px">من عدد المختبرات: ${tot}</div></div></div></div></div></div>`;}
 
 const BC=["#8fd49a","#b3e0a0","#dbe9a0","#f6e39b","#f7c59a","#f1a7a7"];
-function mp(g,t,nm,p=st.p){for(let i=1;i<=NS;i++){const d=docs[kk(g,t,p,i)];if(d&&d.name===nm){const r=calc(d,p);if(r.n)return r.mp;}}return"";}
-function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&docs[k].name&&f(+m[2],+m[3]))s.add(docs[k].name);}return[...s];}
+function mp(g,t,nm,p=st.p){const L=[];for(let i=1;i<=NS;i++){const d=docs[kk(g,t,p,i)];if(d&&d.name&&nrm(d.name)===nrm(nm))L.push(d);}if(!L.length)return"";const r=calc(mergeDocs(L,p),p);return r.n?r.mp:"";}
+function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&docs[k].name&&f(+m[2],+m[3])&&![...s].some(x=>nrm(x)===nrm(docs[k].name)))s.add(docs[k].name);}return[...s];}
 const delta=(a,b)=>{if(a===""||b==="")return"";const x=(b-a)*100;return `<b style="color:var(--${x>=0?"okt":"bt"})">${x>=0?"▲":"▼"} ${Math.abs(x).toFixed(1)}</b>`;};
 function cmpTable(head,nms,cells){return nms.length?`<div class="sum"><table><tr><th>المادة</th>${head.map(x=>`<th>${x}</th>`).join("")}<th>الفرق</th></tr>${nms.map(n=>{const v=cells(n);return `<tr><td>${esc(n)}</td>${v.map(x=>`<td>${pc(x)}</td>`).join("")}<td>${delta(v.find(x=>x!==""),[...v].reverse().find(x=>x!==""))}</td></tr>`;}).join("")}</table></div>`:`<p class="mut">لا توجد بيانات بعد.</p>`;}
 function subjCmp(cols){if(cols.length<2)return"";const S=[...cols].sort((a,b)=>b[1].mp-a[1].mp),avg=S.reduce((s,x)=>s+x[1].mp,0)/S.length;
  return `<div class="card"><b>ترتيب المواد ومقارنتها</b> <span class="mut">(حسب النسبة المئوية للمتوسط، ومتوسط كل المواد ${pc(avg)})</span><div class="sum"><table><tr><th>#</th><th>المادة</th><th>المعلمة</th><th>المختبرات</th><th>المتوسط</th><th>الفرق عن متوسط المواد</th><th>ممتاز</th><th>الضعف النوعي</th><th>أعلى درجة</th><th>أدنى درجة</th></tr>${S.map(([d,r],i)=>`<tr><td>${i==0?"🥇":i==1?"🥈":i==2?"🥉":i+1}</td><td>${esc(d.name)}</td><td>${esc(d.teacher)}</td><td>${r.n}</td><td>${pc(r.mp)}</td><td>${delta(avg,r.mp)}</td><td>${pc(r.pct[0])}</td><td>${pc(r.weak)}</td><td>${f2(r.max)}</td><td>${f2(r.min)}</td></tr>`).join("")}</table></div><p class="mut">الأعلى متوسطًا: ${esc(S[0][0].name)} — الأقل متوسطًا: ${esc(S[S.length-1][0].name)}</p></div>`;}
-function renderCmp(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d.name){const r=calc(d);if(r.n)cols.push([d,r]);}}
+function renderCmp(){const cols=[];subjCols().forEach(d=>{const r=calc(d);if(r.n)cols.push([d,r]);});
  let h=`<div class="card"><h3 style="margin-top:0">${GN[st.g]} — الفصل ${TN[st.t]} — ${PN[st.p]}</h3>`;
  if(!cols.length)h+=`<p class="mut">لا توجد درجات مدخلة لهذا الصف والفصل بعد.</p>`;
  else h+=`<b>النسبة المئوية لمتوسط الدرجات في كل مادة</b><div class="ch">${cols.map(([d,r])=>`<div class="br"><span>${esc(d.name)}</span><div class="tr"><i style="width:${Math.min(r.mp*100,100)}%"></i></div><b>${pc(r.mp)}</b></div>`).join("")}</div>
