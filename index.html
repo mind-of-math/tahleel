@@ -51,9 +51,9 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 <header><h1 id="ttl">📊 مُؤشِّر</h1>
 <div class="bar" style="margin-bottom:8px"><span id="sb" class="bar"></span></div>
 <div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
-<label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span></div></header>
+<label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span><button type="button" id="lo" style="padding:3px 9px;font-size:12px">🔑 تبديل الرمز</button></div></header>
 <nav id="tabs"></nav><main id="app"></main><div id="toast"></div>
-<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">مُؤشِّر</h2><p class="mut" style="margin:0">تحليل نتائج الطالبات</p><p class="mut">اختاري المرحلة ثم أدخلي رمز الدخول الخاص بالمدرسة</p><div id="gs" class="bar" style="justify-content:center"></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
+<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">مُؤشِّر</h2><p class="mut" style="margin:0">تحليل نتائج الطالبات</p><p class="mut">أدخلي رمز الدخول الخاص بمرحلتك</p><div id="gs" hidden></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -108,7 +108,7 @@ function statsHtml(d){const r=calc(d),G=d.name?groupDocs(i=>getDoc(i)).get(nrm(d
 function flash(t){$("#status").textContent=t;}
 function toast(t){const e=$("#toast");e.textContent="⚠ "+t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500);}
 function renderBars(){$("#ttl").textContent="📊 مُؤشِّر — تحليل نتائج "+SG[st.s].n;document.title="مُؤشِّر — "+SG[st.s].b;
- $("#sb").innerHTML=SK0.map(s=>`<button data-s="${s}" class="${st.s==s?"on":""}">${SG[s].b}</button>`).join("");
+ $("#sb").innerHTML=(SCOPE&&SCOPE!=="all"?[st.s]:SK0).map(s=>`<button data-s="${s}" class="${st.s==s?"on":""}">${SG[s].b}</button>`).join("");
  $("#gs").innerHTML=SK0.map(s=>`<button type="button" data-gs="${s}" class="${picked&&st.s==s?"on":""}">${SG[s].b}</button>`).join("");
  $("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${GN[g]}</button>`).join("");
  $("#tb").innerHTML=[1,2].map(t=>`<button data-t="${t}" class="${st.t==t?"on":""}">الفصل ${TN[t]}</button>`).join("");
@@ -239,11 +239,11 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
  }catch(e){if(!e||e.code!=="declined")toast("تعذر التصدير"+(e&&(e.m||e.message)?": "+(e.m||e.message):""));}}
 app.addEventListener("click",e=>{const x=e.target.dataset.x;if(x)doExport(x);});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const D=b.dataset;
- if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s])return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
+ if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s]||(SCOPE&&SCOPE!=="all"&&s!==SCOPE))return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
  else if(D.g)st.g=+D.g;else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
 $("#yr").addEventListener("change",e=>{st.y=nz(e.target.value).replace(/\D/g,"")||"1448";e.target.value=st.y;renderBars();renderView();});
 const SB="https://geruvshyzwgjcmcakpfs.supabase.co",SK="sb_publishable_NSbjHh8mhylyHBDc6i5-GA_wvvE54gn";
-let CODE="",last=null,polling=null;try{CODE=localStorage.getItem("ra_code")||"";}catch(e){}
+let CODE="",SCOPE=null,last=null,polling=null;try{CODE=localStorage.getItem("ra_code")||"";}catch(e){}
 async function rpc(fn,body){const r=await fetch(SB+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:SK,"Content-Type":"application/json"},body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(t.includes("bad_code")?"bad_code":"net");return t?JSON.parse(t):null;}
 const typing=()=>app.contains(document.activeElement)&&document.activeElement.tagName==="INPUT";
 async function pull(){const rs=await rpc("ra_get",{c:CODE,since:last});let cur=false,any=false;
@@ -254,13 +254,15 @@ dl={save:async({filename,data})=>{const b=data instanceof Blob?data:new Blob([da
 function gate(msg){const g=$("#gate");g.style.display="flex";$("#gm").textContent=msg||"";$("#gc").value="";setTimeout(()=>$("#gc").focus(),50);}
 async function start(){if(!CODE)return gate();flash("جارٍ التحقق…");
  try{if(!(await rpc("ra_check",{c:CODE})))return gate("رمز الدخول غير صحيح");}catch(e){flash("تعذر الاتصال بالقاعدة — تأكدي من الإنترنت");setTimeout(start,8000);return;}
+ try{SCOPE=await rpc("ra_scope",{c:CODE});}catch(e){SCOPE=null;}if(!SCOPE)return gate("رمز الدخول غير صحيح");if(SCOPE!=="all"&&st.s!==SCOPE){st.s=SCOPE;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",st.s);}catch(e){}renderBars();
  $("#gate").style.display="none";db={doc:p=>({set:d=>rpc("ra_save",{c:CODE,p_id:p.slice(8),p_data:d})})};
  flash("جارٍ تحميل البيانات…");try{await pull();flash("البيانات محفوظة على الإنترنت ✓");}catch(e){flash("تعذر تحميل البيانات");}
  renderTabs();if(!typing())renderView();
  clearInterval(polling);polling=setInterval(()=>pull().catch(()=>flash("تعذر الاتصال بالقاعدة")),15000);
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull().catch(()=>{});});}
-$("#gf").addEventListener("submit",async e=>{e.preventDefault();if(!picked){$("#gm").textContent="اختاري المرحلة أولًا";return;}const v=nz($("#gc").value).toLowerCase();if(!v)return;$("#gm").textContent="جارٍ التحقق…";
+$("#gf").addEventListener("submit",async e=>{e.preventDefault();const v=nz($("#gc").value).toLowerCase();if(!v)return;$("#gm").textContent="جارٍ التحقق…";
  try{if(await rpc("ra_check",{c:v})){CODE=v;try{localStorage.setItem("ra_code",v);}catch(x){}start();}else $("#gm").textContent="رمز الدخول غير صحيح";}catch(x){$("#gm").textContent="تعذر الاتصال، حاولي مرة أخرى";}});
+$("#lo").addEventListener("click",()=>{try{localStorage.removeItem("ra_code");}catch(e){}location.reload();});
 window.addEventListener("beforeunload",e=>{if(Object.keys(timers).length){e.preventDefault();e.returnValue="";}});
 renderBars();renderView();start();
 </script></body></html>
