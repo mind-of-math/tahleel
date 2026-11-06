@@ -143,7 +143,27 @@ function renderSum(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d
  const row=(l,fn)=>`<tr><th>${l}</th>${cols.map((d,j)=>td(fn(d,rs[j]))).join("")}</tr>`;
  h+=row("اسم المعلمة",d=>esc(d.teacher))+row("عدد طالبات الصف",d=>d.total||"")+row("الدرجة الكاملة للمادة",(d,r)=>r.fm)+rows().map(([l,f])=>row(l,(d,r)=>f(r))).join("")+row("متوسط الدرجات لإجمالي النتيجة من 100",d=>esc(d.avg))
   +row("فحص صحة البيانات",(d,r)=>r.msg[0]==="⚠"?`<span class="bad">⚠ راجعي</span>`:r.msg?"✓":"");
- $("#app").innerHTML=h+`</tbody></table>${exportBar()}</div>`+legend();}
+ $("#app").innerHTML=h+`</tbody></table>${exportBar()}</div>`+chartsHtml(cols,rs)+legend();}
+function chartsHtml(cols,rs){const T=cols.map((d,j)=>[d,rs[j]]).filter(([d,r])=>r.n);if(!T.length)return"";
+ const W=Math.max(340,T.length*84+50),H=200,bw=Math.min(46,(W-40)/T.length*.6),step=(W-40)/T.length;
+ let bars=`<svg viewBox="0 0 ${W} ${H+34}" width="100%" style="max-width:${W}px;font-family:Tahoma,Arial,sans-serif;direction:ltr" role="img" aria-label="متوسط كل مادة"><line x1="10" y1="${H}" x2="${W-10}" y2="${H}" stroke="#cfd8e6"/>`;
+ [25,50,75,100].forEach(v=>{const y=H-v/100*(H-24);bars+=`<line x1="10" y1="${y}" x2="${W-10}" y2="${y}" stroke="#eef2f8"/><text x="${W-6}" y="${y+4}" font-size="9" fill="#9aa3b5" text-anchor="end">${v}</text>`;});
+ T.forEach(([d,r],j)=>{const v=Math.max(0,Math.min(1,r.mp)),bh=v*(H-24),x=W-20-step*j-step/2;
+  bars+=`<rect x="${x-bw/2}" y="${H-bh}" width="${bw}" height="${bh}" rx="4" fill="#7fb2e8"/><text x="${x}" y="${H-bh-5}" font-size="11" font-weight="bold" fill="#2b3445" text-anchor="middle">${(v*100).toFixed(1)}%</text><text x="${x}" y="${H+15}" font-size="10.5" fill="#2b3445" text-anchor="middle">${esc(d.name.length>15?d.name.slice(0,14)+"…":d.name)}</text>`;});
+ bars+=`</svg>`;
+ const sel=st.pie>=0&&st.pie<T.length?st.pie:-1,cnt=[0,0,0,0,0,0];(sel<0?T:[T[sel]]).forEach(([d,r])=>r.cnt.forEach((c,k)=>cnt[k]+=c));
+ const tot=cnt.reduce((a,b)=>a+b,0);let a0=-Math.PI/2,pie=`<svg viewBox="0 0 160 160" width="170" style="direction:ltr" role="img" aria-label="توزيع التقديرات">`;
+ cnt.forEach((c,k)=>{if(!c)return;const a=c/tot*Math.PI*2;if(c===tot){pie+=`<circle cx="80" cy="80" r="70" fill="${BC[k]}"/>`;return;}
+  const a1=a0+a,x0=80+70*Math.cos(a0),y0=80+70*Math.sin(a0),x1=80+70*Math.cos(a1),y1=80+70*Math.sin(a1);
+  pie+=`<path d="M80 80 L${x0.toFixed(2)} ${y0.toFixed(2)} A70 70 0 ${a>Math.PI?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}Z" fill="${BC[k]}" stroke="#fff" stroke-width="1.5"/>`;
+  if(c/tot>=.06){const am=a0+a/2;pie+=`<text x="${(80+46*Math.cos(am)).toFixed(1)}" y="${(84+46*Math.sin(am)).toFixed(1)}" font-size="11" font-weight="bold" fill="#2b3445" text-anchor="middle" font-family="Tahoma,Arial">${Math.round(c/tot*100)}%</text>`;}a0=a1;});
+ pie+=`</svg>`;
+ const lg=BN.map((n,k)=>`<div style="font-size:12px;margin:3px 0"><span style="display:inline-block;width:11px;height:11px;border-radius:2px;background:${BC[k]};vertical-align:middle;margin-inline-end:5px"></span>${n}: <b>${cnt[k]}</b> ${tot?`<bdi dir="ltr">(${(cnt[k]/tot*100).toFixed(1)}%)</bdi>`:""}</div>`).join("");
+ return `<div class="card chartsbox"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;align-items:start">
+ <div><b>النسبة المئوية لمتوسط كل مادة</b><div style="margin-top:10px;overflow-x:auto">${bars}</div></div>
+ <div><b>توزيع التقديرات — </b><select id="piesel" style="font:inherit;border:1px solid var(--bd);border-radius:6px;padding:3px 6px"><option value="-1">كل المواد</option>${T.map(([d],j)=>`<option value="${j}" ${sel===j?"selected":""}>${esc(d.name)}</option>`).join("")}</select>
+ <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px">${pie}<div>${lg}<div class="mut" style="font-size:11px">من عدد المختبرات: ${tot}</div></div></div></div></div></div>`;}
+
 const BC=["#8fd49a","#b3e0a0","#dbe9a0","#f6e39b","#f7c59a","#f1a7a7"];
 function mp(g,t,nm,p=st.p){for(let i=1;i<=NS;i++){const d=docs[kk(g,t,p,i)];if(d&&d.name===nm){const r=calc(d,p);if(r.n)return r.mp;}}return"";}
 function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&docs[k].name&&f(+m[2],+m[3]))s.add(docs[k].name);}return[...s];}
@@ -169,7 +189,7 @@ const app=$("#app");
 function rosterInput(el){if(el.dataset.rn===undefined)return false;const L=roster(),r=L[+el.dataset.rn];if(!r)return true;
  if(el.dataset.rk)r[el.dataset.rk]=el.value;else if(el.dataset.rg){const g=+el.dataset.rg;r.g=(r.g||[]).filter(x=>x!==g);if(el.checked)r.g.push(g);r.g.sort();}
  saveRoster(L);return true;}
-app.addEventListener("change",e=>{if(st.v==="tch"&&e.target.type==="checkbox")rosterInput(e.target);});
+app.addEventListener("change",e=>{if(e.target.id==="piesel"){st.pie=+e.target.value;renderSum();return;}if(st.v==="tch"&&e.target.type==="checkbox")rosterInput(e.target);});
 app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||st.v!=="tch")return;
  if(b.dataset.radd){const L=roster();L.push({n:"",s:"",g:[]});saveRoster(L);renderTch();const ins=document.querySelectorAll('input[data-rk="n"]');ins[ins.length-1]?.focus();}
  else if(b.dataset.rdel!==undefined){const L=roster(),r=L[+b.dataset.rdel];if(r&&(r.n||r.s)&&!confirm(`حذف «${r.n||r.s}» من القائمة؟`))return;L.splice(+b.dataset.rdel,1);saveRoster(L);renderTch();}});
@@ -202,7 +222,8 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
   else if(kind==="doc"){const h=`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(title)}</title></head><body dir="rtl" style="font-family:Arial"><h3 style="text-align:center">${esc(title)}</h3>${thtml(aoa)}</body></html>`;await dl.save({filename:fn+".doc",data:new Blob(["\ufeff"+h],{type:"application/msword"})});}
   else{if(typeof html2canvas==="undefined"||!window.jspdf)throw{m:"مكتبة PDF لم تُحمَّل"};
    const el=document.createElement("div");el.dir="rtl";el.style.cssText=`position:absolute;left:-10000px;top:0;width:${land?1100:720}px;background:#fff;color:#000;padding:16px;font-family:Arial,Tahoma,sans-serif`;
-   el.innerHTML=`<h3 style="text-align:center;margin:0 0 10px">${esc(title)}</h3>${thtml(aoa)}`;document.body.appendChild(el);
+   const cb=st.v==="sum"&&document.querySelector(".chartsbox");let ch="";if(cb){const k=cb.cloneNode(true),s=cb.querySelector("#piesel"),ks=k.querySelector("#piesel");if(s&&ks)ks.replaceWith(Object.assign(document.createElement("span"),{textContent:s.options[s.selectedIndex].text}));ch=`<div style="margin-top:16px">${k.innerHTML}</div>`;}
+   el.innerHTML=`<h3 style="text-align:center;margin:0 0 10px">${esc(title)}</h3>${thtml(aoa)}${ch}`;document.body.appendChild(el);
    const cv=await html2canvas(el,{scale:2,backgroundColor:"#fff"});el.remove();
    const doc=new window.jspdf.jsPDF({orientation:land?"l":"p",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),m=24,iw=W-2*m,ph=Math.floor((H-2*m)*cv.width/iw);
    for(let y=0,pg=0;y<cv.height;y+=ph,pg++){const c=document.createElement("canvas");c.width=cv.width;c.height=Math.min(ph,cv.height-y);c.getContext("2d").drawImage(cv,0,y,cv.width,c.height,0,0,cv.width,c.height);if(pg)doc.addPage();doc.addImage(c.toDataURL("image/jpeg",.92),"JPEG",m,m,iw,c.height*iw/cv.width);}
