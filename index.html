@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>تحليل نتائج المرحلة الثانوية</title>
+<title>تحليل النتائج</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fafcff;--card:#fff;--tx:#2b3445;--mut:#7d879a;--bd:#e3e9f3;--pri:#7fb2e8;--pt:#fff;--hd:#eef4fb;--ok:#eaf6df;--okt:#3d7a12;--bad:#ffe6e6;--bt:#b4232a;--inp:#fffdf0;color-scheme:light}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -13,6 +13,9 @@ h1{margin:0 0 8px;font-size:19px}
 #tabs{padding:10px 14px;overflow-x:auto}
 button,.pill{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 12px;cursor:pointer}
 button.on{background:var(--pri);color:var(--pt);border-color:var(--pri)}
+#sb button.on,#gs button.on{background:var(--tx);border-color:var(--tx)}
+.rs td{padding:3px}.rs input[type=text]{width:100%;min-width:110px;background:var(--inp);border:0;border-radius:0}.rs label{display:block;white-space:nowrap;margin:2px 4px;font-size:13px}
+.sum .rs th:first-child{position:static;min-width:0;width:28px;text-align:center}
 .sep{width:1px;height:22px;background:var(--bd);margin:0 4px}
 #yr{width:78px;text-align:center}
 input{font:inherit;color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:5px 7px;background:var(--card)}
@@ -45,22 +48,33 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 #gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}#gate form{width:100%;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:10px;padding:22px}#gate input{text-align:center;font-size:17px;padding:10px}#gate button{padding:10px;font-size:16px}
 </style></head>
 <body>
-<header><h1>📊 تحليل نتائج المرحلة الثانوية</h1>
+<header><h1 id="ttl">📊 تحليل النتائج</h1>
+<div class="bar" style="margin-bottom:8px"><span id="sb" class="bar"></span></div>
 <div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
 <label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span></div></header>
 <nav id="tabs"></nav><main id="app"></main><div id="toast"></div>
-<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">تحليل نتائج المرحلة الثانوية</h2><p class="mut">أدخلي رمز الدخول الخاص بالمدرسة</p><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
+<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">تحليل النتائج</h2><p class="mut">اختاري المرحلة ثم أدخلي رمز الدخول الخاص بالمدرسة</p><div id="gs" class="bar" style="justify-content:center"></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const NS=10,NC=5,NR=25;const defFM=p=>p==3?40:20,docFM=(d,p=st.p)=>+d.fm>0?+d.fm:defFM(p),bands=fm=>[.9,.8,.75,.7,.5,0].map(x=>Math.round(x*fm*100)/100);
 const BN=["ممتاز","جيد جدًا","جيد مرتفع","جيد","مقبول","ضعيف"];
-const GN=["","أول ثانوي","ثاني ثانوي","ثالث ثانوي"],TN=["","الأول","الثاني"];
+const SG={e1:{n:"الصفوف الأولية (ابتدائي)",l:"للمرحلة الابتدائية (الصفوف الأولية)",b:"أولية",pre:"e1_",gr:["أول ابتدائي","ثاني ابتدائي","ثالث ابتدائي"]},e2:{n:"الصفوف العليا (ابتدائي)",l:"للمرحلة الابتدائية (الصفوف العليا)",b:"عليا",pre:"e2_",gr:["رابع ابتدائي","خامس ابتدائي","سادس ابتدائي"]},
+ m:{n:"المرحلة المتوسطة",l:"للمرحلة المتوسطة",b:"متوسط",pre:"m_",gr:["أول متوسط","ثاني متوسط","ثالث متوسط"]},s:{n:"المرحلة الثانوية",l:"للمرحلة الثانوية",b:"ثانوي",pre:"",gr:["أول ثانوي","ثاني ثانوي","ثالث ثانوي"]}};
+const SK0=["e1","e2","m","s"];
+const TN=["","الأول","الثاني"];
 const $=s=>document.querySelector(s);
-const st={y:"1448",g:1,t:1,p:1,v:"sum"},PN=["","الفترة الأولى","الفترة الثانية","الاختبار النهائي"];
+let stg0="s",picked=false;try{const v=localStorage.getItem("ra_stage");if(SG[v]){stg0=v;picked=true;}}catch(e){}
+const st={s:stg0,y:"1448",g:1,t:1,p:1,v:"sum"},PN=["","الفترة الأولى","الفترة الثانية","الاختبار النهائي"];
+const GN=new Proxy([],{get:(o,k)=>{const n=+k;return n>=1&&n<=3?SG[st.s].gr[n-1]:o[k];}});
+const PF=()=>SG[st.s].pre;
 let docs={},db=null,dl=null,timers={},tt;
-const kk=(g,t,p,i)=>p==3?`${st.y}_g${g}_t${t}_s${i}`:`${st.y}_g${g}_t${t}_p${p}_s${i}`;
+const kk=(g,t,p,i)=>p==3?`${PF()}${st.y}_g${g}_t${t}_s${i}`:`${PF()}${st.y}_g${g}_t${t}_p${p}_s${i}`;
+const rKey=()=>`roster_${st.s}`;
+function roster(){try{return JSON.parse(docs[rKey()].list)||[];}catch(e){return[];}}
+const nrm=s=>String(s||"").trim().replace(/^ال/,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/\s+/g," ");
+function autoTeacher(subj,g){const k=nrm(subj);if(!k)return"";const m=roster().filter(r=>r.n&&nrm(r.s)===k&&(r.g||[]).includes(g));return m.length===1?m[0].n:"";}
 const key=(i,p=st.p)=>kk(st.g,st.t,p,i);
 const MATH="الرياضيات";function getDoc(i){const d=getDoc0(i);return i==1&&d.name!==MATH?{...d,name:MATH}:d;}
 function getDoc0(i){const d=docs[key(i)];if(d&&d.name)return d;for(const q of [1,2,3]){const o=docs[key(i,q)];if(o&&o.name)return {...(d||blank()),name:o.name,teacher:(d&&d.teacher)||o.teacher};}return d||blank();}
@@ -79,7 +93,7 @@ function calc(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);const v=[];let bad=0;JS
 const rows=fm=>[["عدد الطالبات المختبرات (حسب الدرجات المدخلة)",r=>r.n],["عدد الطالبات غير المختبرات",r=>r.t?Math.max(r.t-r.n,0):""],[`عدد الحاصلات على الدرجة الكاملة${fm?` (${fm})`:""}`,r=>r.full],["أعلى درجة في الاختبار",r=>f2(r.max)],["أدنى درجة في الاختبار",r=>f2(r.min)],
  ...BN.map((n,k)=>[`نسبة الحاصلات على ${n}`,r=>pc(r.pct[k])]),["الانحراف المعياري لدرجات الاختبار",r=>f2(r.sd),1],["نسبة الضعف النوعي (جيد + مقبول + ضعيف)",r=>pc(r.weak),1],
  [`متوسط درجات الاختبار${fm?` من ${fm}`:""}`,r=>f2(r.mean),1],[`النسبة المئوية للمتوسط${fm?` من ${fm}`:" من الدرجة الكاملة"}`,r=>pc(r.mp),1]];
-const secKey=g=>`${st.y}_g${g}_secs`;
+const secKey=g=>`${PF()}${st.y}_g${g}_secs`;
 const secName=(g,c)=>{try{return JSON.parse(docs[secKey(g)].sn)[c]||"فصل "+(c+1);}catch(e){return"فصل "+(c+1);}};
 function secStats(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);return JSON.parse(d.sc).slice(0,NC).map(col=>{const v=[];col.slice(0,NR).forEach(x=>{if(nz(x)!==""&&!chk(x,fm))v.push(Number(nz(x)));});
  const n=v.length,m=n?v.reduce((a,b)=>a+b,0)/n:"",cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);
@@ -93,14 +107,29 @@ function statsHtml(d){const r=calc(d);return `<table class="st">`+rows(r.fm).map
  +`<tr class="k"><th>متوسط الدرجات لإجمالي النتيجة من 100</th><td>${esc(d.avg)}</td></tr></table><div class="msg ${r.msg[0]==="⚠"?"bad":""}">${r.msg||"أدخلي الدرجات ليظهر الفحص"}</div>${secCmpHtml(d)}`;}
 function flash(t){$("#status").textContent=t;}
 function toast(t){const e=$("#toast");e.textContent="⚠ "+t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500);}
-function renderBars(){$("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${GN[g]}</button>`).join("");
+function renderBars(){$("#ttl").textContent="📊 تحليل نتائج "+SG[st.s].n;document.title="تحليل النتائج — "+SG[st.s].b;
+ $("#sb").innerHTML=SK0.map(s=>`<button data-s="${s}" class="${st.s==s?"on":""}">${SG[s].b}</button>`).join("");
+ $("#gs").innerHTML=SK0.map(s=>`<button type="button" data-gs="${s}" class="${picked&&st.s==s?"on":""}">${SG[s].b}</button>`).join("");
+ $("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${GN[g]}</button>`).join("");
  $("#tb").innerHTML=[1,2].map(t=>`<button data-t="${t}" class="${st.t==t?"on":""}">الفصل ${TN[t]}</button>`).join("");
  $("#pb").innerHTML=[1,2,3].map(q=>`<button data-p="${q}" class="${st.p==q?"on":""}">${["","فترة 1","فترة 2","نهائي"][q]}</button>`).join("");renderTabs();}
-function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}">📋 النتائج</button><button data-v="cmp" class="${st.v=="cmp"?"on":""}">📈 الرسوم والمقارنة</button>`;
+function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}">📋 النتائج</button><button data-v="cmp" class="${st.v=="cmp"?"on":""}">📈 الرسوم والمقارنة</button><button data-v="tch" class="${st.v=="tch"?"on":""}">👩‍🏫 المعلمات</button>`;
  for(let i=1;i<=NS;i++){const d=getDoc(i);h+=`<button data-v="${i}" class="${st.v==i?"on":""}">${esc(d&&d.name)||"مادة "+i}</button>`;}$("#tabs").innerHTML=h;}
-function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():renderSubj(+st.v);}
-function renderSubj(i){const d=getDoc(i),sc=JSON.parse(d.sc);
- let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" value="${esc(d.name)}" ${i==1?'readonly title="مادة مثبتة" style="background:var(--hd);font-weight:700"':''}></label><label>اسم المعلمة<input data-f="teacher" value="${esc(d.teacher)}"></label>
+function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():st.v==="tch"?renderTch():renderSubj(+st.v);}
+function renderTch(){const L=roster(),gr=SG[st.s].gr;
+ let h=`<div class="card"><h3 style="margin-top:0">معلمات ${SG[st.s].n}</h3><p class="mut">تكتب مسؤولة المرحلة هنا اسم كل معلمة ومادتها والصفوف التي تدرّسها. بعدها يظهر اسم المعلمة تلقائيًا في صفحة المادة عند كتابة اسم المادة. تُحفظ تلقائيًا.</p>
+ <div class="sum"><table class="rs"><thead><tr><th>م</th><th>اسم المعلمة</th><th>المادة</th><th>الصفوف</th><th></th></tr></thead><tbody>`;
+ L.forEach((r,i)=>{h+=`<tr><td>${i+1}</td><td><input type="text" data-rn="${i}" data-rk="n" value="${esc(r.n)}" placeholder="اسم المعلمة"></td><td><input type="text" data-rn="${i}" data-rk="s" list="subjl" value="${esc(r.s)}" placeholder="المادة"></td><td style="text-align:start">${gr.map((g,k)=>`<label><input type="checkbox" data-rn="${i}" data-rg="${k+1}" ${(r.g||[]).includes(k+1)?"checked":""}> ${esc(g)}</label>`).join("")}</td><td><button type="button" data-rdel="${i}" title="حذف" aria-label="حذف">✕</button></td></tr>`;});
+ if(!L.length)h+=`<tr><td colspan="5" class="mut">لا توجد معلمات بعد. اضغطي «إضافة معلمة».</td></tr>`;
+ h+=`</tbody></table></div><datalist id="subjl">${subjList().map(s=>`<option value="${esc(s)}">`).join("")}</datalist><p class="xb"><button type="button" class="on" data-radd="1">+ إضافة معلمة</button></p></div>`;
+ $("#app").innerHTML=h;}
+function subjList(){const s=new Set([MATH,"لغتي","اللغة العربية","اللغة الإنجليزية","العلوم","الدراسات الإسلامية","الدراسات الاجتماعية","المهارات الرقمية","التربية الفنية","التربية البدنية","الفيزياء","الكيمياء","الأحياء"]);roster().forEach(r=>r.s&&s.add(r.s.trim()));names(()=>true).forEach(n=>s.add(n));return[...s];}
+function saveRoster(L){docs[rKey()]={list:JSON.stringify(L)};sched(rKey());}
+function setTeacher(i,a){[1,2,3].forEach(q=>{const k2=key(i,q),d2=docs[k2]=docs[k2]||{...blank(),name:getDoc(i).name};d2.teacher=a;d2.ta=a;sched(k2);});const ti=document.querySelector('[data-f="teacher"]');if(ti)ti.value=a;}
+function renderSubj(i){let d=getDoc(i);if(!d.teacher&&d.name){const a=autoTeacher(d.name,st.g);if(a){setTeacher(i,a);d=getDoc(i);}}const sc=JSON.parse(d.sc);
+ const tl=roster().filter(r=>r.n&&(!d.name||nrm(r.s)===nrm(d.name)||!r.s)).map(r=>r.n),tl2=tl.length?tl:roster().filter(r=>r.n).map(r=>r.n);
+ let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" list="subjl" value="${esc(d.name)}" ${i==1?'readonly title="مادة مثبتة" style="background:var(--hd);font-weight:700"':''}></label><label>اسم المعلمة<input data-f="teacher" list="tchl" value="${esc(d.teacher)}"></label>
+ <datalist id="subjl">${subjList().map(s=>`<option value="${esc(s)}">`).join("")}</datalist><datalist id="tchl">${[...new Set(tl2)].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
  <label>عدد الطالبات الكلي<input data-f="total" type="number" min="0" max="125" value="${d.total||""}"></label>
  <label>الدرجة الكاملة للمادة<input data-f="fm" list="fml" type="number" min="1" max="1000" step="any" placeholder="${defFM(st.p)}" value="${d.fm||""}"><datalist id="fml"><option value="20"><option value="30"><option value="40"><option value="10"><option value="50"></datalist></label><label>متوسط الدرجات من 100<input data-f="avg" type="number" min="0" max="100" step="any" value="${esc(d.avg)}"></label></div>
  <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p>${exportBar()}</div>
@@ -110,14 +139,14 @@ function renderSubj(i){const d=getDoc(i),sc=JSON.parse(d.sc);
 function renderSum(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d.name)cols.push(d);}
  if(!cols.length){$("#app").innerHTML=`<div class="card">لا توجد مواد بعد. اختاري تبويب مادة وأدخلي اسمها ودرجاتها، وستظهر هنا تلقائيًا.</div>`+legend();return;}
  const rs=cols.map(d=>calc(d)),th=(a)=>`<th>${a}</th>`,td=(a)=>`<td>${a}</td>`;
- let h=`<div class="card sum"><h3 style="margin-top:0">بيان بتحليل نتائج الطالبات في ${PN[st.p]} للفصل الدراسي ${TN[st.t]} للمرحلة الثانوية للعام الدراسي ${esc(st.y)}ه، الصف: ${GN[st.g]}</h3><table id="sumt"><thead><tr>${th("المادة")}${cols.map(d=>th(esc(d.name))).join("")}</tr></thead><tbody>`;
+ let h=`<div class="card sum"><h3 style="margin-top:0">بيان بتحليل نتائج الطالبات في ${PN[st.p]} للفصل الدراسي ${TN[st.t]} ${SG[st.s].l} للعام الدراسي ${esc(st.y)}ه، الصف: ${GN[st.g]}</h3><table id="sumt"><thead><tr>${th("المادة")}${cols.map(d=>th(esc(d.name))).join("")}</tr></thead><tbody>`;
  const row=(l,fn)=>`<tr><th>${l}</th>${cols.map((d,j)=>td(fn(d,rs[j]))).join("")}</tr>`;
  h+=row("اسم المعلمة",d=>esc(d.teacher))+row("عدد طالبات الصف",d=>d.total||"")+row("الدرجة الكاملة للمادة",(d,r)=>r.fm)+rows().map(([l,f])=>row(l,(d,r)=>f(r))).join("")+row("متوسط الدرجات لإجمالي النتيجة من 100",d=>esc(d.avg))
   +row("فحص صحة البيانات",(d,r)=>r.msg[0]==="⚠"?`<span class="bad">⚠ راجعي</span>`:r.msg?"✓":"");
  $("#app").innerHTML=h+`</tbody></table>${exportBar()}</div>`+legend();}
 const BC=["#8fd49a","#b3e0a0","#dbe9a0","#f6e39b","#f7c59a","#f1a7a7"];
 function mp(g,t,nm,p=st.p){for(let i=1;i<=NS;i++){const d=docs[kk(g,t,p,i)];if(d&&d.name===nm){const r=calc(d,p);if(r.n)return r.mp;}}return"";}
-function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===st.y&&docs[k].name&&f(+m[2],+m[3]))s.add(docs[k].name);}return[...s];}
+function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&docs[k].name&&f(+m[2],+m[3]))s.add(docs[k].name);}return[...s];}
 const delta=(a,b)=>{if(a===""||b==="")return"";const x=(b-a)*100;return `<b style="color:var(--${x>=0?"okt":"bt"})">${x>=0?"▲":"▼"} ${Math.abs(x).toFixed(1)}</b>`;};
 function cmpTable(head,nms,cells){return nms.length?`<div class="sum"><table><tr><th>المادة</th>${head.map(x=>`<th>${x}</th>`).join("")}<th>الفرق</th></tr>${nms.map(n=>{const v=cells(n);return `<tr><td>${esc(n)}</td>${v.map(x=>`<td>${pc(x)}</td>`).join("")}<td>${delta(v.find(x=>x!==""),[...v].reverse().find(x=>x!==""))}</td></tr>`;}).join("")}</table></div>`:`<p class="mut">لا توجد بيانات بعد.</p>`;}
 function subjCmp(cols){if(cols.length<2)return"";const S=[...cols].sort((a,b)=>b[1].mp-a[1].mp),avg=S.reduce((s,x)=>s+x[1].mp,0)/S.length;
@@ -129,7 +158,7 @@ function renderCmp(){const cols=[];for(let i=1;i<=NS;i++){const d=getDoc(i);if(d
  <b>توزيع التقديرات (من عدد المختبرات)</b><div class="ch">${cols.map(([d,r])=>`<div class="br"><span>${esc(d.name)}</span><div class="tr">${r.cnt.map((c,k)=>c?`<i style="width:${c/r.n*100}%;background:${BC[k]}" title="${BN[k]}: ${c}">${c}</i>`:"").join("")}</div></div>`).join("")}</div>
  <div class="lg">${BN.map((n,k)=>`<span><u style="background:${BC[k]}"></u>${n}</span>`).join("")}</div>`;
  h+=`</div>${subjCmp(cols)}${secMatrix(cols)}<div class="card"><b>مقارنة الفصل الأول بالثاني (${PN[st.p]}) — ${GN[st.g]}</b> <span class="mut">(النسبة المئوية للمتوسط، والفرق بالنقاط المئوية)</span>${cmpTable(["الفصل الأول","الفصل الثاني"],names(g=>g===st.g),n=>[mp(st.g,1,n),mp(st.g,2,n)])}</div>`;
- h+=`<div class="card"><b>مقارنة الصفوف (${PN[st.p]}) — الفصل ${TN[st.t]}</b> <span class="mut">(من الأول إلى الثالث؛ تُطابق المواد بالاسم نفسه)</span>${cmpTable(["أول ثانوي","ثاني ثانوي","ثالث ثانوي"],names((g,t)=>t===st.t),n=>[1,2,3].map(g=>mp(g,st.t,n)))}</div>`;
+ h+=`<div class="card"><b>مقارنة الصفوف (${PN[st.p]}) — الفصل ${TN[st.t]}</b> <span class="mut">(من الأول إلى الثالث؛ تُطابق المواد بالاسم نفسه)</span>${cmpTable(SG[st.s].gr,names((g,t)=>t===st.t),n=>[1,2,3].map(g=>mp(g,st.t,n)))}</div>`;
  h+=`<div class="card"><b>مقارنة الفترات — ${GN[st.g]} — الفصل ${TN[st.t]}</b> <span class="mut">(الفترة الأولى ثم الثانية ثم النهائي؛ الفرق من أول فترة إلى آخرها)</span>${cmpTable([PN[1],PN[2],PN[3]],names((g,t)=>g===st.g&&t===st.t),n=>[1,2,3].map(q=>mp(st.g,st.t,n,q)))}</div>`;
  $("#app").innerHTML=h;}
 function legend(){return `<div class="card"><b>معايير التقدير</b><table style="margin-top:8px"><tr><th>التقدير</th><th>النسبة</th><th>مثال: من 20</th><th>مثال: من 40</th></tr>${BN.map((n,k)=>{const P=["90% فأكثر","80% - أقل من 90%","75% - أقل من 80%","70% - أقل من 75%","50% - أقل من 70%","أقل من 50%"][k],R=f=>{const b=bands(f);return k==0?`${b[0]} - ${f}`:k==5?`أقل من ${b[4]}`:`${b[k]} - أقل من ${b[k-1]}`};return `<tr><td>${n}</td><td>${P}</td><td>${R(20)}</td><td>${R(40)}</td></tr>`}).join("")}</table>
@@ -137,10 +166,19 @@ function legend(){return `<div class="card"><b>معايير التقدير</b><t
 function sched(id){if(/_s1$/.test(id)&&docs[id])docs[id].name=MATH;clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
  try{if(db)await db.doc("results/"+id).set(docs[id]);else localStorage.setItem("res_"+id,JSON.stringify(docs[id]));flash("تم الحفظ ✓");}catch(e){flash("تعذر الحفظ");}},700);}
 const app=$("#app");
-app.addEventListener("input",e=>{const el=e.target,i=+st.v;if(!i)return;
+function rosterInput(el){if(el.dataset.rn===undefined)return false;const L=roster(),r=L[+el.dataset.rn];if(!r)return true;
+ if(el.dataset.rk)r[el.dataset.rk]=el.value;else if(el.dataset.rg){const g=+el.dataset.rg;r.g=(r.g||[]).filter(x=>x!==g);if(el.checked)r.g.push(g);r.g.sort();}
+ saveRoster(L);return true;}
+app.addEventListener("change",e=>{if(st.v==="tch"&&e.target.type==="checkbox")rosterInput(e.target);});
+app.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||st.v!=="tch")return;
+ if(b.dataset.radd){const L=roster();L.push({n:"",s:"",g:[]});saveRoster(L);renderTch();const ins=document.querySelectorAll('input[data-rk="n"]');ins[ins.length-1]?.focus();}
+ else if(b.dataset.rdel!==undefined){const L=roster(),r=L[+b.dataset.rdel];if(r&&(r.n||r.s)&&!confirm(`حذف «${r.n||r.s}» من القائمة؟`))return;L.splice(+b.dataset.rdel,1);saveRoster(L);renderTch();}});
+app.addEventListener("input",e=>{const el=e.target,i=+st.v;if(st.v==="tch"){if(el.type!=="checkbox")rosterInput(el);return;}if(!i)return;
  if(el.dataset.sn!==undefined){const k=secKey(st.g);let a=[];try{a=JSON.parse(docs[k].sn);}catch(x){}a[+el.dataset.sn]=el.value;docs[k]={sn:JSON.stringify(a)};$("#stats").innerHTML=statsHtml(getDoc(i));sched(k);return;}const id=key(i);const d=docs[id]=docs[id]||blank();
  if(el.dataset.f){d[el.dataset.f]=["total","fm"].includes(el.dataset.f)?+el.value:el.value;if(el.dataset.f=="total"&&+el.value>NC*NR)toast(`عدد الطالبات الكلي يتجاوز الحد الأقصى (${NC} فصول × ${NR} طالبة = ${NC*NR})`);if(el.dataset.f=="name")renderTabs();if(el.dataset.f=="fm"){const fm=docFM(d);$("#fmh").textContent=fm;document.querySelectorAll("input[data-c]").forEach(x=>x.classList.toggle("bad",!!chk(x.value,fm)));}
-  if(el.dataset.f=="name"||el.dataset.f=="teacher")[1,2,3].forEach(q=>{if(q!==st.p){const k2=key(i,q),d2=docs[k2]=docs[k2]||blank();d2[el.dataset.f]=el.value;sched(k2);}});}
+  if(el.dataset.f=="name"||el.dataset.f=="teacher")[1,2,3].forEach(q=>{if(q!==st.p){const k2=key(i,q),d2=docs[k2]=docs[k2]||blank();d2[el.dataset.f]=el.value;sched(k2);}});
+  if(el.dataset.f=="name"){const a=autoTeacher(el.value,st.g);if(a&&(!d.teacher||d.teacher===d.ta))setTeacher(i,a);}
+  if(el.dataset.f=="teacher")delete d.ta;}
  else if(el.dataset.c!==undefined){const sc=JSON.parse(d.sc);sc[el.dataset.c][el.dataset.r]=el.value;d.sc=JSON.stringify(sc);
   const m=chk(el.value,docFM(d));el.classList.toggle("bad",!!m);if(m)toast(m);}
  else return;$("#stats").innerHTML=statsHtml(d);sched(id);});
@@ -172,15 +210,16 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
  }catch(e){if(!e||e.code!=="declined")toast("تعذر التصدير"+(e&&(e.m||e.message)?": "+(e.m||e.message):""));}}
 app.addEventListener("click",e=>{const x=e.target.dataset.x;if(x)doExport(x);});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const D=b.dataset;
- if(D.g)st.g=+D.g;else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
+ if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s])return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
+ else if(D.g)st.g=+D.g;else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
 $("#yr").addEventListener("change",e=>{st.y=nz(e.target.value).replace(/\D/g,"")||"1448";e.target.value=st.y;renderBars();renderView();});
 const SB="https://geruvshyzwgjcmcakpfs.supabase.co",SK="sb_publishable_NSbjHh8mhylyHBDc6i5-GA_wvvE54gn";
 let CODE="",last=null,polling=null;try{CODE=localStorage.getItem("ra_code")||"";}catch(e){}
 async function rpc(fn,body){const r=await fetch(SB+"/rest/v1/rpc/"+fn,{method:"POST",headers:{apikey:SK,"Content-Type":"application/json"},body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(t.includes("bad_code")?"bad_code":"net");return t?JSON.parse(t):null;}
 const typing=()=>app.contains(document.activeElement)&&document.activeElement.tagName==="INPUT";
 async function pull(){const rs=await rpc("ra_get",{c:CODE,since:last});let cur=false,any=false;
- (rs||[]).forEach(x=>{if(!last||x.updated_at>last)last=x.updated_at;if(timers[x.id]||((x.id===key(st.v)||x.id===secKey(st.g))&&typing()))return;
-  if(JSON.stringify(docs[x.id])!==JSON.stringify(x.data)){docs[x.id]=x.data;any=true;if(x.id===key(st.v)||x.id===secKey(st.g))cur=true;}});
+ (rs||[]).forEach(x=>{if(!last||x.updated_at>last)last=x.updated_at;const mine=x.id===key(st.v)||x.id===secKey(st.g)||(st.v==="tch"&&x.id===rKey());if(timers[x.id]||(mine&&typing()))return;
+  if(JSON.stringify(docs[x.id])!==JSON.stringify(x.data)){docs[x.id]=x.data;any=true;if(mine)cur=true;}});
  if(any){renderTabs();if((st.v==="sum"||st.v==="cmp"||cur)&&!typing())renderView();}}
 dl={save:async({filename,data})=>{const b=data instanceof Blob?data:new Blob([data]);const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}};
 function gate(msg){const g=$("#gate");g.style.display="flex";$("#gm").textContent=msg||"";$("#gc").value="";setTimeout(()=>$("#gc").focus(),50);}
@@ -191,7 +230,7 @@ async function start(){if(!CODE)return gate();flash("جارٍ التحقق…");
  renderTabs();if(!typing())renderView();
  clearInterval(polling);polling=setInterval(()=>pull().catch(()=>flash("تعذر الاتصال بالقاعدة")),15000);
  document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull().catch(()=>{});});}
-$("#gf").addEventListener("submit",async e=>{e.preventDefault();const v=nz($("#gc").value).toLowerCase();if(!v)return;$("#gm").textContent="جارٍ التحقق…";
+$("#gf").addEventListener("submit",async e=>{e.preventDefault();if(!picked){$("#gm").textContent="اختاري المرحلة أولًا";return;}const v=nz($("#gc").value).toLowerCase();if(!v)return;$("#gm").textContent="جارٍ التحقق…";
  try{if(await rpc("ra_check",{c:v})){CODE=v;try{localStorage.setItem("ra_code",v);}catch(x){}start();}else $("#gm").textContent="رمز الدخول غير صحيح";}catch(x){$("#gm").textContent="تعذر الاتصال، حاولي مرة أخرى";}});
 window.addEventListener("beforeunload",e=>{if(Object.keys(timers).length){e.preventDefault();e.returnValue="";}});
 renderBars();renderView();start();
