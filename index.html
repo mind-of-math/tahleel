@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>تحليل النتائج</title>
+<title>مُؤشِّر — تحليل النتائج</title>
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fafcff;--card:#fff;--tx:#2b3445;--mut:#7d879a;--bd:#e3e9f3;--pri:#7fb2e8;--pt:#fff;--hd:#eef4fb;--ok:#eaf6df;--okt:#3d7a12;--bad:#ffe6e6;--bt:#b4232a;--inp:#fffdf0;color-scheme:light}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -48,12 +48,12 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 #gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}#gate form{width:100%;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:10px;padding:22px}#gate input{text-align:center;font-size:17px;padding:10px}#gate button{padding:10px;font-size:16px}
 </style></head>
 <body>
-<header><h1 id="ttl">📊 تحليل النتائج</h1>
+<header><h1 id="ttl">📊 مُؤشِّر</h1>
 <div class="bar" style="margin-bottom:8px"><span id="sb" class="bar"></span></div>
 <div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
 <label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span></div></header>
 <nav id="tabs"></nav><main id="app"></main><div id="toast"></div>
-<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">تحليل النتائج</h2><p class="mut">اختاري المرحلة ثم أدخلي رمز الدخول الخاص بالمدرسة</p><div id="gs" class="bar" style="justify-content:center"></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
+<div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">مُؤشِّر</h2><p class="mut" style="margin:0">تحليل نتائج الطالبات</p><p class="mut">اختاري المرحلة ثم أدخلي رمز الدخول الخاص بالمدرسة</p><div id="gs" class="bar" style="justify-content:center"></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -107,7 +107,7 @@ function statsHtml(d){const r=calc(d);return `<table class="st">`+rows(r.fm).map
  +`<tr class="k"><th>متوسط الدرجات لإجمالي النتيجة من 100</th><td>${esc(d.avg)}</td></tr></table><div class="msg ${r.msg[0]==="⚠"?"bad":""}">${r.msg||"أدخلي الدرجات ليظهر الفحص"}</div>${secCmpHtml(d)}`;}
 function flash(t){$("#status").textContent=t;}
 function toast(t){const e=$("#toast");e.textContent="⚠ "+t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",3500);}
-function renderBars(){$("#ttl").textContent="📊 تحليل نتائج "+SG[st.s].n;document.title="تحليل النتائج — "+SG[st.s].b;
+function renderBars(){$("#ttl").textContent="📊 مُؤشِّر — تحليل نتائج "+SG[st.s].n;document.title="مُؤشِّر — "+SG[st.s].b;
  $("#sb").innerHTML=SK0.map(s=>`<button data-s="${s}" class="${st.s==s?"on":""}">${SG[s].b}</button>`).join("");
  $("#gs").innerHTML=SK0.map(s=>`<button type="button" data-gs="${s}" class="${picked&&st.s==s?"on":""}">${SG[s].b}</button>`).join("");
  $("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${GN[g]}</button>`).join("");
