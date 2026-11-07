@@ -46,6 +46,7 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 .tr{flex:1;height:22px;background:var(--hd);border-radius:6px;overflow:hidden;display:flex}.tr i{display:block;height:100%;background:var(--pri);color:#2b3445;font-size:11px;font-style:normal;text-align:center;line-height:22px}
 .lg{display:flex;flex-wrap:wrap;gap:12px;font-size:12px}.lg u{display:inline-block;width:12px;height:12px;border-radius:3px;margin-inline-end:4px;vertical-align:middle}
 #toast{position:fixed;inset:auto 14px calc(18px + env(safe-area-inset-bottom,0px)) 14px;margin:auto;max-width:520px;padding:12px 14px;border-radius:10px;background:#ffe6e6;color:#b4232a;border:1px solid #f3b9b9;font-weight:700;text-align:center;display:none;box-shadow:0 4px 18px #0002;z-index:9}
+.impm{position:fixed;inset:0;z-index:15;background:rgba(43,52,69,.4);display:flex;align-items:center;justify-content:center;padding:16px}.impm[hidden]{display:none}.impm .bx{background:var(--card);border-radius:14px;padding:16px;width:100%;max-width:460px;max-height:88vh;overflow:auto}.impm table{margin:8px 0}.impm select{font:inherit;border:1px solid var(--bd);border-radius:6px;padding:3px 6px}.impm .row{display:flex;gap:8px;margin-top:10px}.impm .row button{flex:1}
 #gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}#gate form{width:100%;max-width:360px;text-align:center;display:flex;flex-direction:column;gap:10px;padding:22px}#gate input{text-align:center;font-size:17px;padding:10px}#gate button{padding:10px;font-size:16px}
 </style></head>
 <body>
@@ -53,7 +54,7 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 <div class="bar" style="margin-bottom:8px"><span id="sb" class="bar"></span></div>
 <div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
 <label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span><button type="button" id="lo" style="padding:3px 9px;font-size:12px">🔑 تبديل الرمز</button></div></header>
-<nav id="tabs"></nav><main id="app"></main><div id="toast"></div>
+<nav id="tabs"></nav><main id="app"></main><div id="toast"></div><input type="file" id="impf" accept=".xlsx,.xls,.csv" hidden><div id="impm" class="impm" hidden></div>
 <div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">مُؤشِّر</h2><p class="mut" style="margin:0">تحليل نتائج الطالبات</p><p class="mut">أدخلي رمز الدخول الخاص بمرحلتك</p><div id="gs" hidden></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -133,7 +134,7 @@ function renderSubj(i){let d=getDoc(i);if(!d.teacher&&d.name){const a=autoTeache
  <datalist id="subjl">${subjList().map(s=>`<option value="${esc(s)}">`).join("")}</datalist><datalist id="tchl">${[...new Set(tl2)].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
  <label>عدد الطالبات الكلي<input data-f="total" type="number" min="0" max="125" value="${d.total||""}"></label>
  <label>الدرجة الكاملة للمادة<input data-f="fm" list="fml" type="number" min="1" max="1000" step="any" placeholder="${defFM(st.p)}" value="${d.fm||""}"><datalist id="fml"><option value="20"><option value="30"><option value="40"><option value="10"><option value="50"></datalist></label><label>متوسط الدرجات من 100<input data-f="avg" type="number" min="0" max="100" step="any" value="${esc(d.avg)}"></label></div>
- <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p><p class="xb" style="margin-top:0">${exportBar().replace(/^<p class="xb">|<\/p>$/g,"")}<span class="sep"></span><button type="button" data-clr="1" style="border-color:#f3b9b9;color:var(--bt);background:var(--bad)">🗑 مسح الدرجات</button></p><p class="mut" style="background:var(--hd);border-radius:8px;padding:8px 10px;margin:8px 0 0">📋 للصق مجموعة درجات: انسخيها من Excel أو من كشف، ثم اضغطي على أول خانة والصقيها، فتتوزع على الخانات تحتها وبجانبها.</p></div>
+ <p class="mut"><b>${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}</b><br>أدخلي درجات الاختبار (من <span id="fmh">${docFM(d)}</span>) — كل عمود يمثل فصلاً (شعبة) وكل صف طالبة. تُحفظ البيانات تلقائيًا.</p><p class="xb" style="margin-top:0">${exportBar().replace(/^<p class="xb">|<\/p>$/g,"")}<span class="sep"></span><button type="button" data-imp="1" style="border-color:#9fd9c4;color:#1d7a55;background:#e6f6ef">📥 استيراد من Excel</button><button type="button" data-clr="1" style="border-color:#f3b9b9;color:var(--bt);background:var(--bad)">🗑 مسح الدرجات</button></p><p class="mut" style="background:var(--hd);border-radius:8px;padding:8px 10px;margin:8px 0 0">📋 للصق مجموعة درجات: انسخيها من Excel أو من كشف، ثم اضغطي على أول خانة والصقيها، فتتوزع على الخانات تحتها وبجانبها.</p></div>
  <div class="wrap2"><div class="card sc"><table class="g"><thead><tr><th>م</th>${Array.from({length:NC},(_,c)=>`<th><input class="sn" data-sn="${c}" value="${esc(secName(st.g,c))}" title="اضغطي لتعديل اسم الفصل"></th>`).join("")}</tr></thead><tbody>`;
  for(let r=0;r<NR;r++){h+=`<tr><td>${r+1}</td>`;for(let c=0;c<NC;c++){const x=sc[c][r];h+=`<td><input class="${chk(x,docFM(d))?"bad":""}" inputmode="decimal" data-c="${c}" data-r="${r}" value="${esc(x)}"></td>`;}h+="</tr>";}
  $("#app").innerHTML=h+`</tbody></table></div><div class="card" id="stats">${statsHtml(d)}</div></div>`;}
@@ -212,6 +213,38 @@ app.addEventListener("input",e=>{const el=e.target,i=+st.v;if(st.v==="tch"){if(e
   const m=chk(el.value,docFM(d));el.classList.toggle("bad",!!m);if(m)toast(m);}
  else return;$("#stats").innerHTML=statsHtml(d);sched(id);});
 
+
+let IMP=null;
+app.addEventListener("click",e=>{if(!e.target.closest("[data-imp]"))return;if(typeof XLSX==="undefined"){toast("تعذّر تحميل أداة قراءة Excel، تأكدي من الإنترنت ثم حدّثي الصفحة");return;}const f=$("#impf");f.value="";f.click();});
+$("#impf").addEventListener("change",async e=>{const file=e.target.files[0];if(!file)return;const i=+st.v;if(!i)return;
+ try{const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});let best=null;
+  wb.SheetNames.forEach(sn=>{const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:""});const cols=findCols(aoa);if(cols.length&&(!best||cols.reduce((a,c)=>a+c.v.length,0)>best.cols.reduce((a,c)=>a+c.v.length,0)))best={sn,cols};});
+  if(!best){toast("لم أجد أعمدة درجات في الملف. تأكدي أن الدرجات أرقام في أعمدة.");return;}
+  IMP={i,cols:best.cols};showImp();}catch(x){toast("تعذّرت قراءة الملف. تأكدي أنه ملف Excel صحيح.");}});
+function findCols(aoa){const W=Math.max(0,...aoa.map(r=>r.length)),out=[];
+ for(let c=0;c<W;c++){let head="",v=[],txt=0;
+  for(const r of aoa){const x=r[c];if(x===""||x==null)continue;const s=nz(String(x));const n=Number(s);
+   if(s!==""&&isFinite(n)){v.push(s);}else{txt++;if(!v.length&&String(x).trim())head=String(x).trim();}}
+  if(v.length<2||txt>v.length)continue;const nums=v.map(Number);
+  if(Math.max(...nums)>200||nums.every(n=>Number.isInteger(n)&&n>=1&&n<=60&&nums.length>3&&isSeq(nums)))continue;
+  out.push({head:head||("عمود "+(c+1)),v});}
+ return out;}
+function isSeq(a){for(let k=1;k<a.length;k++)if(a[k]!==a[k-1]+1)return false;return true;}
+function showImp(){const d=getDoc(IMP.i),fm=docFM(d);let used=0;
+ const rows=IMP.cols.map((c,k)=>{const def=k<NC?k:-1;const big=c.v.filter(x=>Number(x)>fm||Number(x)<0).length;
+  return `<tr><td>${esc(c.head)}</td><td>${c.v.length}${c.v.length>NR?` <span style="color:var(--bt)">(أول ${NR} فقط)</span>`:""}${big?`<br><span style="color:var(--bt);font-size:12px">${big} أكبر من ${fm}</span>`:""}</td><td><select data-ic="${k}"><option value="-1">تجاهل</option>${Array.from({length:NC},(_,s)=>`<option value="${s}" ${s===def?"selected":""}>${esc(secName(st.g,s))}</option>`).join("")}</select></td></tr>`;}).join("");
+ $("#impm").innerHTML=`<div class="bx"><b>استيراد الدرجات — ${esc(d.name||"المادة")}</b><p class="mut" style="margin:6px 0 0">وُجد ${IMP.cols.length===1?"عمود درجات واحد":IMP.cols.length===2?"عمودا درجات":IMP.cols.length+" أعمدة درجات"} في الملف. اختاري لكل عمود الفصل الذي يوضع فيه:</p>
+ <table><tr><th>العمود في الملف</th><th>عدد الدرجات</th><th>يوضع في</th></tr>${rows}</table>
+ <p class="mut">الدرجات الحالية في الفصل المختار تُستبدل بدرجات الملف. الدرجات الأكبر من الدرجة الكاملة تظهر بالأحمر للمراجعة.</p><p id="impe" style="color:var(--bt);font-weight:700;margin:0"></p>
+ <div class="row"><button type="button" class="on" id="impok">استيراد</button><button type="button" id="impx">إلغاء</button></div></div>`;
+ $("#impm").hidden=false;}
+$("#impm").addEventListener("click",e=>{if(e.target.id==="impx"||e.target.id==="impm"){$("#impm").hidden=true;IMP=null;return;}
+ if(e.target.id!=="impok"||!IMP)return;const sel=[...document.querySelectorAll("[data-ic]")].map(s=>+s.value),pick=sel.filter(x=>x>=0);
+ if(!pick.length){$("#impe").textContent="اختاري فصلًا لعمود واحد على الأقل";return;}
+ if(new Set(pick).size!==pick.length){$("#impe").textContent="اخترتِ الفصل نفسه لأكثر من عمود";return;}
+ const i=IMP.i,id=key(i),cur=getDoc(i),d=docs[id]=docs[id]||{...blank(),name:cur.name,teacher:cur.teacher},sc=JSON.parse(d.sc);let n=0;
+ sel.forEach((s,k)=>{if(s<0)return;const v=IMP.cols[k].v.slice(0,NR);sc[s]=Array.from({length:NR},(_,r)=>v[r]??"");n+=v.length;});
+ d.sc=JSON.stringify(sc);sched(id);$("#impm").hidden=true;IMP=null;renderSubj(i);flash(`تم استيراد ${n} درجة ✓`);});
 app.addEventListener("click",e=>{const b=e.target.closest("[data-clr]");if(!b)return;const i=+st.v;if(!i)return;const id=key(i),d=docs[id];
  if(!d||!JSON.parse(d.sc).some(c=>c.some(x=>nz(x)!==""))){toast("لا توجد درجات لمسحها");return;}
  if(!confirm(`مسح كل درجات «${getDoc(i).name||"المادة"}» في ${PN[st.p]}؟\nتبقى بيانات المادة الأخرى والفترات الأخرى كما هي.`))return;
