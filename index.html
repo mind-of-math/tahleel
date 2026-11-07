@@ -87,9 +87,9 @@ const chk=(s,fm)=>{s=nz(s);if(s==="")return"";const n=Number(s);if(!isFinite(n))
 const f2=x=>x===""?"":(+x).toFixed(2),pc=x=>x===""?"":(x*100).toFixed(2)+"%";
 function calc(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);const v=[];let bad=0;JSON.parse(d.sc).slice(0,NC).forEach(c=>c.slice(0,d._m?1e4:NR).forEach(x=>{if(nz(x)==="")return;if(chk(x,fm))bad++;else v.push(Number(nz(x)));}));
  const t=+d.total||0,n=v.length,r={n,bad,t,fm};r.full=v.filter(x=>x===fm).length;r.max=n?Math.max(...v):"";r.min=n?Math.min(...v):"";
- r.cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);r.pct=r.cnt.map(c=>t?c/t:"");
+ r.cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);r.pct=r.cnt.map(c=>n?c/n:"");
  const m=n?v.reduce((a,b)=>a+b,0)/n:"";r.mean=m;r.mp=n?m/fm:"";r.sd=n>1?Math.sqrt(v.reduce((a,b)=>a+(b-m)**2,0)/(n-1)):"";
- r.weak=t?(r.cnt[3]+r.cnt[4]+r.cnt[5])/t:"";
+ r.weak=n?(r.cnt[3]+r.cnt[4]+r.cnt[5])/n:"";
  r.msg=!n&&!bad?"":bad?`⚠ توجد ${bad} قيمة غير صحيحة (أكبر من ${fm} أو سالبة أو غير رقمية) — مظللة بالأحمر`:!t?"⚠ أدخلي عدد الطالبات الكلي":n>t?`⚠ عدد الدرجات المدخلة (${n}) أكبر من عدد الطالبات (${t})`:"✓ البيانات سليمة";
  return r;}
 const rows=fm=>[["عدد الطالبات المختبرات (حسب الدرجات المدخلة)",r=>r.n],["عدد الطالبات غير المختبرات",r=>r.t?Math.max(r.t-r.n,0):""],[`عدد الحاصلات على الدرجة الكاملة${fm?` (${fm})`:""}`,r=>r.full],["أعلى درجة في الاختبار",r=>f2(r.max)],["أدنى درجة في الاختبار",r=>f2(r.min)],
@@ -192,7 +192,7 @@ function renderCmp(){const cols=[];subjCols().forEach(d=>{const r=calc(d);if(r.n
  h+=`<div class="card"><b>مقارنة الفترات — ${GN[st.g]} — الفصل ${TN[st.t]}</b> <span class="mut">(الفترة الأولى ثم الثانية ثم النهائي؛ الفرق من أول فترة إلى آخرها)</span>${cmpTable([PN[1],PN[2],PN[3]],names((g,t)=>g===st.g&&t===st.t),n=>[1,2,3].map(q=>mp(st.g,st.t,n,q)))}</div>`;
  $("#app").innerHTML=h;}
 function legend(){return `<div class="card"><b>معايير التقدير</b><table style="margin-top:8px"><tr><th>التقدير</th><th>النسبة</th><th>مثال: من 20</th><th>مثال: من 40</th></tr>${BN.map((n,k)=>{const P=["90% فأكثر","80% - أقل من 90%","75% - أقل من 80%","70% - أقل من 75%","50% - أقل من 70%","أقل من 50%"][k],R=f=>{const b=bands(f);return k==0?`${b[0]} - ${f}`:k==5?`أقل من ${b[4]}`:`${b[k]} - أقل من ${b[k-1]}`};return `<tr><td>${n}</td><td>${P}</td><td>${R(20)}</td><td>${R(40)}</td></tr>`}).join("")}</table>
- <p class="mut">نسبة الحاصلات = عدد الحاصلات في التقدير ÷ عدد الطالبات الكلي. نسبة الضعف النوعي = (جيد + مقبول + ضعيف). الانحراف المعياري للعينة. الحدود بنسب ثابتة من الدرجة الكاملة (90% و80% و75% و70% و50%)، وتتغير تلقائيًا مع الفترة (فترة 1 وفترة 2 من 20، والنهائي من 40).</p></div>`;}
+ <p class="mut">نسبة الحاصلات = عدد الحاصلات في التقدير ÷ عدد الطالبات المختبرات (غير المختبرات لا يدخلن في النسب). نسبة الضعف النوعي = (جيد + مقبول + ضعيف). الانحراف المعياري للعينة. الحدود بنسب ثابتة من الدرجة الكاملة (90% و80% و75% و70% و50%)، وتتغير تلقائيًا مع الفترة (فترة 1 وفترة 2 من 20، والنهائي من 40).</p></div>`;}
 function sched(id){if(/_s1$/.test(id)&&docs[id])docs[id].name=MATH;clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
  try{if(db)await db.doc("results/"+id).set(docs[id]);else localStorage.setItem("res_"+id,JSON.stringify(docs[id]));flash("تم الحفظ ✓");}catch(e){flash("تعذر الحفظ");}},700);}
 const app=$("#app");
