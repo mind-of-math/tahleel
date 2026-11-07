@@ -85,7 +85,7 @@ function roster(){try{return JSON.parse(docs[rKey()].list)||[];}catch(e){return[
 const nrm=s=>String(s||"").trim().replace(/^ال/,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/\s+/g," ");
 function autoTeacher(subj,g){const k=nrm(subj);if(!k)return"";const m=roster().filter(r=>r.n&&nrm(r.s)===k&&(r.g||[]).includes(g));return m.length===1?m[0].n:"";}
 const key=(i,p=st.p)=>kk(st.g,st.t,p,i);
-const MATH="الرياضيات";function getDoc(i){const d=getDoc0(i);return i==1&&d.name!==MATH?{...d,name:MATH}:d;}
+const MATH="الرياضيات";const pinMath=()=>!(st.s==="s"&&trk(st.g)==="b");const PIN=i=>i==1&&pinMath();function getDoc(i){const d=getDoc0(i);return PIN(i)&&d.name!==MATH?{...d,name:MATH}:d;}
 function getDoc0(i){const d=docs[key(i)];if(d&&d.name)return d;for(const q of [1,2,3]){const o=docs[key(i,q)];if(o&&o.name)return {...(d||blank()),name:o.name,teacher:(d&&d.teacher)||o.teacher};}return d||blank();}
 const blank=()=>({name:"",teacher:"",total:0,avg:"",sc:JSON.stringify(Array.from({length:NC},()=>Array(NR).fill("")))});
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -124,7 +124,7 @@ function renderBars(){$("#ttl").textContent="📊 مُؤشِّر — تحليل 
  $("#tb").innerHTML=[1,2].map(t=>`<button data-t="${t}" class="${st.t==t?"on":""}">الفصل ${TN[t]}</button>`).join("");
  $("#pb").innerHTML=[1,2,3].map(q=>`<button data-p="${q}" class="${st.p==q?"on":""}">${["","فترة 1","فترة 2","نهائي"][q]}</button>`).join("");renderTabs();}
 function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}">📋 النتائج</button><button data-v="cmp" class="${st.v=="cmp"?"on":""}">📈 الرسوم والمقارنة</button><button data-v="tch" class="${st.v=="tch"?"on":""}">👩‍🏫 المعلمات</button>`;
- const G=groupDocs(i=>getDoc(i));for(const i of slotOrder()){const d=getDoc(i);if(i!==1&&!d.name&&st.v!==i)continue;const dup=d.name&&G.get(nrm(d.name)).length>1;h+=`<button data-v="${i}" class="sbj ${st.v==i?"on":""}">${i==1?'<span class="dh lk" title="مثبتة أولًا">🔒</span>':'<span class="dh" title="اسحبي لتغيير الترتيب">⠿</span>'}${esc(d&&d.name)||"مادة جديدة"}${dup&&d.teacher?` <small>(${esc(d.teacher)})</small>`:""}</button>`;}if(slotOrder().some(i=>i>1&&!getDoc(i).name&&st.v!==i))h+=`<button type="button" class="addsbj" data-addsbj="1">＋ إضافة مادة</button>`;$("#tabs").innerHTML=h;}
+ const G=groupDocs(i=>getDoc(i));for(const i of slotOrder()){const d=getDoc(i);if(!PIN(i)&&!d.name&&st.v!==i)continue;const dup=d.name&&G.get(nrm(d.name)).length>1;h+=`<button data-v="${i}" class="sbj ${st.v==i?"on":""}">${PIN(i)?'<span class="dh lk" title="مثبتة أولًا">🔒</span>':'<span class="dh" title="اسحبي لتغيير الترتيب">⠿</span>'}${esc(d&&d.name)||"مادة جديدة"}${dup&&d.teacher?` <small>(${esc(d.teacher)})</small>`:""}</button>`;}if(slotOrder().some(i=>!PIN(i)&&!getDoc(i).name&&st.v!==i))h+=`<button type="button" class="addsbj" data-addsbj="1">＋ إضافة مادة</button>`;$("#tabs").innerHTML=h;}
 function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():st.v==="tch"?renderTch():renderSubj(+st.v);}
 function renderTch(){const L=roster(),gr=SG[st.s].gr;
  let h=`<div class="card"><h3 style="margin-top:0">معلمات ${SG[st.s].n}</h3><p class="mut">تكتب مسؤولة المرحلة هنا اسم كل معلمة ومادتها والصفوف التي تدرّسها. بعدها يظهر اسم المعلمة تلقائيًا في صفحة المادة عند كتابة اسم المادة. تُحفظ تلقائيًا.</p>
@@ -138,7 +138,7 @@ function saveRoster(L){docs[rKey()]={list:JSON.stringify(L)};sched(rKey());}
 function setTeacher(i,a){[1,2,3].forEach(q=>{const k2=key(i,q),d2=docs[k2]=docs[k2]||{...blank(),name:getDoc(i).name};d2.teacher=a;d2.ta=a;sched(k2);});const ti=document.querySelector('[data-f="teacher"]');if(ti)ti.value=a;}
 function renderSubj(i){let d=getDoc(i);if(!d.teacher&&d.name){const a=autoTeacher(d.name,st.g);if(a){setTeacher(i,a);d=getDoc(i);}}const sc=JSON.parse(d.sc);
  const tl=roster().filter(r=>r.n&&(!d.name||nrm(r.s)===nrm(d.name)||!r.s)).map(r=>r.n),tl2=tl.length?tl:roster().filter(r=>r.n).map(r=>r.n);
- let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" list="subjl" value="${esc(d.name)}" ${i==1?'readonly title="مادة مثبتة" style="background:var(--hd);font-weight:700"':''}></label><label>اسم المعلمة<input data-f="teacher" list="tchl" value="${esc(d.teacher)}"></label>
+ let h=`<div class="card"><div class="form"><label>المادة<input data-f="name" list="subjl" value="${esc(d.name)}" ${PIN(i)?'readonly title="مادة مثبتة" style="background:var(--hd);font-weight:700"':''}></label><label>اسم المعلمة<input data-f="teacher" list="tchl" value="${esc(d.teacher)}"></label>
  <datalist id="subjl">${subjList().map(s=>`<option value="${esc(s)}">`).join("")}</datalist><datalist id="tchl">${[...new Set(tl2)].map(n=>`<option value="${esc(n)}">`).join("")}</datalist>
  <label>عدد الطالبات الكلي<input data-f="total" type="number" min="0" max="125" value="${d.total||""}"></label>
  <label>الدرجة الكاملة للمادة<input data-f="fm" list="fml" type="number" min="1" max="1000" step="any" placeholder="${defFM(st.p)}" value="${d.fm||""}"><datalist id="fml"><option value="20"><option value="30"><option value="40"><option value="10"><option value="50"></datalist></label><label>متوسط الدرجات من 100<input data-f="avg" type="number" min="0" max="100" step="any" value="${esc(d.avg)}"></label></div>
@@ -153,7 +153,7 @@ function mergeDocs(L,p=st.p){if(L.length===1)return L[0];const fm=docFM(L[0],p),
  const av=L.filter(d=>nz(d.avg)!==""&&isFinite(+nz(d.avg))),wt=av.reduce((a,d)=>a+(+d.total||1),0),avg=av.length?String(Math.round(av.reduce((a,d)=>a+(+nz(d.avg))*(+d.total||1),0)/wt*100)/100):"";
  return{name:L[0].name,teacher:tch.join(" - "),total:tot,avg,fm:L[0].fm,sc:JSON.stringify(sc),_m:L.length};}
 const ordKey=()=>`${PF()}${st.y}_g${st.g}${trk(st.g)}_order`;
-function slotOrder(){let o=[];try{o=JSON.parse(docs[ordKey()].o)||[];}catch(e){}o=o.filter((x,k)=>Number.isInteger(x)&&x>1&&x<=NS&&o.indexOf(x)===k);for(let i=2;i<=NS;i++)if(!o.includes(i))o.push(i);return[1,...o];}
+function slotOrder(){let o=[];try{o=JSON.parse(docs[ordKey()].o)||[];}catch(e){}const pm=pinMath();o=o.filter((x,k)=>Number.isInteger(x)&&x>=(pm?2:1)&&x<=NS&&o.indexOf(x)===k);for(let i=pm?2:1;i<=NS;i++)if(!o.includes(i))o.push(i);return pm?[1,...o]:o;}
 function groupDocs(get){const g=new Map();for(const i of slotOrder()){const d=get(i);if(d&&d.name){const k=nrm(d.name);if(!g.has(k))g.set(k,[]);g.get(k).push(d);}}return g;}
 function subjCols(p=st.p){return[...groupDocs(i=>getDoc(i)).values()].map(L=>mergeDocs(L,p));}
 function renderSum(){const cols=subjCols();
@@ -203,7 +203,7 @@ function renderCmp(){const cols=[];subjCols().forEach(d=>{const r=calc(d);if(r.n
  $("#app").innerHTML=h;}
 function legend(){return `<div class="card"><b>معايير التقدير</b><table style="margin-top:8px"><tr><th>التقدير</th><th>النسبة</th><th>مثال: من 20</th><th>مثال: من 40</th></tr>${BN.map((n,k)=>{const P=["90% فأكثر","80% - أقل من 90%","75% - أقل من 80%","70% - أقل من 75%","50% - أقل من 70%","أقل من 50%"][k],R=f=>{const b=bands(f);return k==0?`${b[0]} - ${f}`:k==5?`أقل من ${b[4]}`:`${b[k]} - أقل من ${b[k-1]}`};return `<tr><td>${n}</td><td>${P}</td><td>${R(20)}</td><td>${R(40)}</td></tr>`}).join("")}</table>
  <p class="mut">نسبة الحاصلات = عدد الحاصلات في التقدير ÷ عدد الطالبات المختبرات (غير المختبرات لا يدخلن في النسب). نسبة الضعف النوعي = (جيد + مقبول + ضعيف). الانحراف المعياري للعينة. الحدود بنسب ثابتة من الدرجة الكاملة (90% و80% و75% و70% و50%)، وتتغير تلقائيًا مع الفترة (فترة 1 وفترة 2 من 20، والنهائي من 40).</p></div>`;}
-function sched(id){if(/_s1$/.test(id)&&docs[id])docs[id].name=MATH;clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
+function sched(id){if(/_s1$/.test(id)&&docs[id]&&!/^\d+_g\db_/.test(id))docs[id].name=MATH;clearTimeout(timers[id]);flash("جارٍ الحفظ…");timers[id]=setTimeout(async()=>{delete timers[id];
  try{if(db)await db.doc("results/"+id).set(docs[id]);else localStorage.setItem("res_"+id,JSON.stringify(docs[id]));flash("تم الحفظ ✓");}catch(e){flash("تعذر الحفظ");}},700);}
 const app=$("#app");
 function rosterInput(el){if(el.dataset.rn===undefined)return false;const L=roster(),r=L[+el.dataset.rn];if(!r)return true;
@@ -297,7 +297,7 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
 app.addEventListener("click",e=>{const x=e.target.dataset.x;if(x)doExport(x);});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const D=b.dataset;
  if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s]||(SCOPE&&SCOPE!=="all"&&s!==SCOPE))return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;st.k="";if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
- else if(D.addsbj){const f=slotOrder().find(i=>i>1&&!getDoc(i).name);if(!f){toast("وصلتِ للحد الأقصى ("+NS+" مادة)");return;}st.v=f;renderTabs();renderView();setTimeout(()=>{const n=document.querySelector('[data-f="name"]');if(n)n.focus();},30);return;}
+ else if(D.addsbj){const f=slotOrder().find(i=>!PIN(i)&&!getDoc(i).name);if(!f){toast("وصلتِ للحد الأقصى ("+NS+" مادة)");return;}st.v=f;renderTabs();renderView();setTimeout(()=>{const n=document.querySelector('[data-f="name"]');if(n)n.focus();},30);return;}
  else if(D.g){st.g=+D.g;if(!TR(st.g))st.k="";}else if(D.k){st.k=D.k==="0"?"":D.k;}else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
 $("#yr").addEventListener("change",e=>{st.y=nz(e.target.value).replace(/\D/g,"")||"1448";e.target.value=st.y;renderBars();renderView();});
 const SB="https://geruvshyzwgjcmcakpfs.supabase.co",SK="sb_publishable_NSbjHh8mhylyHBDc6i5-GA_wvvE54gn";
@@ -326,10 +326,10 @@ $("#lo").addEventListener("click",()=>{try{localStorage.removeItem("ra_code");}c
  tabs.addEventListener("pointerdown",e=>{const hd=e.target.closest(".dh");if(!hd||hd.classList.contains("lk"))return;const b=hd.closest("button.sbj");if(!b)return;
   e.preventDefault();drag={b,moved:false};b.classList.add("drag");document.body.classList.add("dragging");try{hd.setPointerCapture(e.pointerId);}catch(x){}});
  tabs.addEventListener("pointermove",e=>{if(!drag)return;const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest("button.sbj");
-  if(!t||t===drag.b||t.dataset.v==="1")return;const r=t.getBoundingClientRect(),after=document.dir==="rtl"||getComputedStyle(tabs).direction==="rtl"?e.clientX<r.left+r.width/2:e.clientX>r.left+r.width/2;
+  if(!t||t===drag.b||PIN(+t.dataset.v))return;const r=t.getBoundingClientRect(),after=document.dir==="rtl"||getComputedStyle(tabs).direction==="rtl"?e.clientX<r.left+r.width/2:e.clientX>r.left+r.width/2;
   t.parentNode.insertBefore(drag.b,after?t.nextSibling:t);drag.moved=true;});
  const end=()=>{if(!drag)return;const{b,moved}=drag;drag=null;b.classList.remove("drag");document.body.classList.remove("dragging");
-  if(!moved)return;const o=[...tabs.querySelectorAll("button.sbj")].map(x=>+x.dataset.v).filter(x=>x>1);docs[ordKey()]={o:JSON.stringify(o)};sched(ordKey());
+  if(!moved)return;const o=[...tabs.querySelectorAll("button.sbj")].map(x=>+x.dataset.v).filter(x=>!PIN(x));docs[ordKey()]={o:JSON.stringify(o)};sched(ordKey());
   tabs.dataset.justDragged="1";setTimeout(()=>delete tabs.dataset.justDragged,50);renderTabs();if(st.v==="sum"||st.v==="cmp")renderView();};
  tabs.addEventListener("pointerup",end);tabs.addEventListener("pointercancel",end);
  tabs.addEventListener("click",e=>{if(tabs.dataset.justDragged||e.target.closest(".dh")){e.stopPropagation();e.preventDefault();}},true);})();
