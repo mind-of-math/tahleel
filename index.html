@@ -15,6 +15,8 @@ h1{margin:0 0 8px;font-size:19px}
 button,.pill{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 12px;cursor:pointer}
 button.on{background:var(--pri);color:var(--pt);border-color:var(--pri)}
 .dh{color:var(--mut);margin-inline-end:5px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;padding:0 2px}.dh.lk{cursor:default;font-size:.8em}button.sbj.drag{opacity:.55;outline:2px dashed var(--pri);outline-offset:1px}body.dragging,body.dragging *{cursor:grabbing!important;user-select:none}
+.addsbj{border:1.5px dashed var(--pri)!important;color:#2c5a97;background:#eef6ff!important}
+#kb{margin-inline-start:4px}#kb button.trk{border-radius:999px;padding:5px 12px}#kb button.trk.on{background:var(--tx);border-color:var(--tx);color:#fff}
 #sb button.on,#gs button.on{background:var(--tx);border-color:var(--tx)}
 .rs td{padding:3px}.rs input[type=text]{width:100%;min-width:110px;background:var(--inp);border:0;border-radius:0}.rs label{display:block;white-space:nowrap;margin:2px 4px;font-size:13px}
 .sum .rs th:first-child{position:static;min-width:0;width:28px;text-align:center}
@@ -53,7 +55,7 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 <body>
 <header><h1 id="ttl">📊 مُؤشِّر</h1>
 <div class="bar" style="margin-bottom:8px"><span id="sb" class="bar"></span></div>
-<div class="bar"><span id="gb" class="bar"></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
+<div class="bar"><span id="gb" class="bar"></span><span id="kb" class="bar" hidden></span><span class="sep"></span><span id="tb" class="bar"></span><span class="sep"></span><span id="pb" class="bar"></span><span class="sep"></span>
 <label class="mut">العام الدراسي (هجري) <input id="yr" value="1448"></label><span class="sep"></span><span id="status" class="mut"></span><button type="button" id="lo" style="padding:3px 9px;font-size:12px">🔑 تبديل الرمز</button></div></header>
 <nav id="tabs"></nav><main id="app"></main><div id="toast"></div><input type="file" id="impf" accept=".xlsx,.xls,.csv" hidden><div id="impm" class="impm" hidden></div>
 <div id="gate"><form id="gf" class="card"><div style="font-size:34px">📊</div><h2 style="margin:6px 0">مُؤشِّر</h2><p class="mut" style="margin:0">تحليل نتائج الطالبات</p><p class="mut">أدخلي رمز الدخول الخاص بمرحلتك</p><div id="gs" hidden></div><input id="gc" inputmode="numeric" autocomplete="off" autocapitalize="off" placeholder="رمز الدخول"><button class="on" type="submit">دخول</button><p id="gm" style="color:var(--bt);font-weight:700;min-height:1.2em;margin:4px 0 0"></p></form></div>
@@ -61,7 +63,7 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-const NS=10,NC=5,NR=25;const defFM=p=>p==3?40:20,docFM=(d,p=st.p)=>+d.fm>0?+d.fm:defFM(p),bands=fm=>[.9,.8,.75,.7,.5,0].map(x=>Math.round(x*fm*100)/100);
+const NS=20,NC=5,NR=25;const defFM=p=>p==3?40:20,docFM=(d,p=st.p)=>+d.fm>0?+d.fm:defFM(p),bands=fm=>[.9,.8,.75,.7,.5,0].map(x=>Math.round(x*fm*100)/100);
 const BN=["ممتاز","جيد جدًا","جيد مرتفع","جيد","مقبول","ضعيف"];
 const SG={e1:{n:"الصفوف الأولية (ابتدائي)",l:"للمرحلة الابتدائية (الصفوف الأولية)",b:"أولية",pre:"e1_",gr:["أول ابتدائي","ثاني ابتدائي","ثالث ابتدائي"]},e2:{n:"الصفوف العليا (ابتدائي)",l:"للمرحلة الابتدائية (الصفوف العليا)",b:"عليا",pre:"e2_",gr:["رابع ابتدائي","خامس ابتدائي","سادس ابتدائي"]},
  m:{n:"المرحلة المتوسطة",l:"للمرحلة المتوسطة",b:"متوسط",pre:"m_",gr:["أول متوسط","ثاني متوسط","ثالث متوسط"]},s:{n:"المرحلة الثانوية",l:"للمرحلة الثانوية",b:"ثانوي",pre:"",gr:["أول ثانوي","ثاني ثانوي","ثالث ثانوي"]}};
@@ -69,11 +71,15 @@ const SK0=["e1","e2","m","s"];
 const TN=["","الأول","الثاني"];
 const $=s=>document.querySelector(s);
 let stg0="s",picked=false;try{const v=localStorage.getItem("ra_stage");if(SG[v]){stg0=v;picked=true;}}catch(e){}
-const st={s:stg0,y:"1448",g:1,t:1,p:1,v:"sum"},PN=["","الفترة الأولى","الفترة الثانية","الاختبار النهائي"];
-const GN=new Proxy([],{get:(o,k)=>{const n=+k;return n>=1&&n<=3?SG[st.s].gr[n-1]:o[k];}});
+const st={s:stg0,y:"1448",g:1,k:"",t:1,p:1,v:"sum"},PN=["","الفترة الأولى","الفترة الثانية","الاختبار النهائي"];
+const TRK={s:{2:1,3:1},e1:{1:1,2:1,3:1}},TRL={s:[{c:"",n:"علمي",i:"🔬"},{c:"b",n:"إداري",i:"💼"}],e1:[{c:"",n:"عام",i:"📘"},{c:"n",n:"احتياجات خاصة",i:"💜"}]};
+const TR=g=>TRK[st.s]&&TRK[st.s][g]?TRL[st.s]:null;
+const trk=g=>TR(g)?(st.k||""):"";
+const trName=g=>{const L=TR(g);if(!L)return"";const x=L.find(y=>y.c===trk(g))||L[0];return x.n;};
+const GN=new Proxy([],{get:(o,k)=>{const n=+k;return n>=1&&n<=3?SG[st.s].gr[n-1]+(TR(n)?" — "+trName(n):""):o[k];}});
 const PF=()=>SG[st.s].pre;
 let docs={},db=null,dl=null,timers={},tt;
-const kk=(g,t,p,i)=>p==3?`${PF()}${st.y}_g${g}_t${t}_s${i}`:`${PF()}${st.y}_g${g}_t${t}_p${p}_s${i}`;
+const kk=(g,t,p,i)=>p==3?`${PF()}${st.y}_g${g}${trk(g)}_t${t}_s${i}`:`${PF()}${st.y}_g${g}${trk(g)}_t${t}_p${p}_s${i}`;
 const rKey=()=>`roster_${st.s}`;
 function roster(){try{return JSON.parse(docs[rKey()].list)||[];}catch(e){return[];}}
 const nrm=s=>String(s||"").trim().replace(/^ال/,"").replace(/[أإآ]/g,"ا").replace(/ة/g,"ه").replace(/ى/g,"ي").replace(/\s+/g," ");
@@ -96,7 +102,7 @@ function calc(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);const v=[];let bad=0;JS
 const rows=fm=>[["عدد الطالبات المختبرات (حسب الدرجات المدخلة)",r=>r.n],["عدد الطالبات غير المختبرات",r=>r.t?Math.max(r.t-r.n,0):""],[`عدد الحاصلات على الدرجة الكاملة${fm?` (${fm})`:""}`,r=>r.full],["أعلى درجة في الاختبار",r=>f2(r.max)],["أدنى درجة في الاختبار",r=>f2(r.min)],
  ...BN.map((n,k)=>[`نسبة الحاصلات على ${n}`,r=>pc(r.pct[k])]),["الانحراف المعياري لدرجات الاختبار",r=>f2(r.sd),1],["نسبة الضعف النوعي (جيد + مقبول + ضعيف)",r=>pc(r.weak),1],
  [`متوسط درجات الاختبار${fm?` من ${fm}`:""}`,r=>f2(r.mean),1],[`النسبة المئوية للمتوسط${fm?` من ${fm}`:" من الدرجة الكاملة"}`,r=>pc(r.mp),1]];
-const secKey=g=>`${PF()}${st.y}_g${g}_secs`;
+const secKey=g=>`${PF()}${st.y}_g${g}${trk(g)}_secs`;
 const secName=(g,c)=>{try{return JSON.parse(docs[secKey(g)].sn)[c]||"فصل "+(c+1);}catch(e){return"فصل "+(c+1);}};
 function secStats(d,p=st.p){const fm=docFM(d,p),LO=bands(fm);return JSON.parse(d.sc).slice(0,NC).map(col=>{const v=[];col.slice(0,d._m?1e4:NR).forEach(x=>{if(nz(x)!==""&&!chk(x,fm))v.push(Number(nz(x)));});
  const n=v.length,m=n?v.reduce((a,b)=>a+b,0)/n:"",cnt=LO.map((lo,k)=>v.filter(x=>x>=lo&&(k?x<LO[k-1]:true)).length);
@@ -113,11 +119,12 @@ function toast(t){const e=$("#toast");e.textContent="⚠ "+t;e.style.display="bl
 function renderBars(){$("#ttl").textContent="📊 مُؤشِّر — تحليل نتائج "+SG[st.s].n;document.title="مُؤشِّر — "+SG[st.s].b;
  $("#sb").innerHTML=(SCOPE&&SCOPE!=="all"?[st.s]:SK0).map(s=>`<button data-s="${s}" class="${st.s==s?"on":""}">${SG[s].b}</button>`).join("");
  $("#gs").innerHTML=SK0.map(s=>`<button type="button" data-gs="${s}" class="${picked&&st.s==s?"on":""}">${SG[s].b}</button>`).join("");
- $("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${GN[g]}</button>`).join("");
+ $("#gb").innerHTML=[1,2,3].map(g=>`<button data-g="${g}" class="${st.g==g?"on":""}">${SG[st.s].gr[g-1]}</button>`).join("");
+ const TL=TR(st.g);$("#kb").hidden=!TL;$("#kb").innerHTML=TL?`<span class="mut">المسار:</span>`+TL.map(x=>`<button data-k="${x.c||"0"}" class="trk ${trk(st.g)===x.c?"on":""}">${x.i} ${x.n}</button>`).join(""):"";
  $("#tb").innerHTML=[1,2].map(t=>`<button data-t="${t}" class="${st.t==t?"on":""}">الفصل ${TN[t]}</button>`).join("");
  $("#pb").innerHTML=[1,2,3].map(q=>`<button data-p="${q}" class="${st.p==q?"on":""}">${["","فترة 1","فترة 2","نهائي"][q]}</button>`).join("");renderTabs();}
 function renderTabs(){let h=`<button data-v="sum" class="${st.v=="sum"?"on":""}">📋 النتائج</button><button data-v="cmp" class="${st.v=="cmp"?"on":""}">📈 الرسوم والمقارنة</button><button data-v="tch" class="${st.v=="tch"?"on":""}">👩‍🏫 المعلمات</button>`;
- const G=groupDocs(i=>getDoc(i));for(const i of slotOrder()){const d=getDoc(i),dup=d.name&&G.get(nrm(d.name)).length>1;h+=`<button data-v="${i}" class="sbj ${st.v==i?"on":""}">${i==1?'<span class="dh lk" title="مثبتة أولًا">🔒</span>':'<span class="dh" title="اسحبي لتغيير الترتيب">⠿</span>'}${esc(d&&d.name)||"مادة "+i}${dup&&d.teacher?` <small>(${esc(d.teacher)})</small>`:""}</button>`;}$("#tabs").innerHTML=h;}
+ const G=groupDocs(i=>getDoc(i));for(const i of slotOrder()){const d=getDoc(i);if(i!==1&&!d.name&&st.v!==i)continue;const dup=d.name&&G.get(nrm(d.name)).length>1;h+=`<button data-v="${i}" class="sbj ${st.v==i?"on":""}">${i==1?'<span class="dh lk" title="مثبتة أولًا">🔒</span>':'<span class="dh" title="اسحبي لتغيير الترتيب">⠿</span>'}${esc(d&&d.name)||"مادة جديدة"}${dup&&d.teacher?` <small>(${esc(d.teacher)})</small>`:""}</button>`;}if(slotOrder().some(i=>i>1&&!getDoc(i).name&&st.v!==i))h+=`<button type="button" class="addsbj" data-addsbj="1">＋ إضافة مادة</button>`;$("#tabs").innerHTML=h;}
 function renderView(){st.v==="sum"?renderSum():st.v==="cmp"?renderCmp():st.v==="tch"?renderTch():renderSubj(+st.v);}
 function renderTch(){const L=roster(),gr=SG[st.s].gr;
  let h=`<div class="card"><h3 style="margin-top:0">معلمات ${SG[st.s].n}</h3><p class="mut">تكتب مسؤولة المرحلة هنا اسم كل معلمة ومادتها والصفوف التي تدرّسها. بعدها يظهر اسم المعلمة تلقائيًا في صفحة المادة عند كتابة اسم المادة. تُحفظ تلقائيًا.</p>
@@ -145,7 +152,7 @@ function mergeDocs(L,p=st.p){if(L.length===1)return L[0];const fm=docFM(L[0],p),
  const tch=[...new Set(L.map(d=>String(d.teacher||"").trim()).filter(Boolean))],tot=L.reduce((a,d)=>a+(+d.total||0),0);
  const av=L.filter(d=>nz(d.avg)!==""&&isFinite(+nz(d.avg))),wt=av.reduce((a,d)=>a+(+d.total||1),0),avg=av.length?String(Math.round(av.reduce((a,d)=>a+(+nz(d.avg))*(+d.total||1),0)/wt*100)/100):"";
  return{name:L[0].name,teacher:tch.join(" - "),total:tot,avg,fm:L[0].fm,sc:JSON.stringify(sc),_m:L.length};}
-const ordKey=()=>`${PF()}${st.y}_g${st.g}_order`;
+const ordKey=()=>`${PF()}${st.y}_g${st.g}${trk(st.g)}_order`;
 function slotOrder(){let o=[];try{o=JSON.parse(docs[ordKey()].o)||[];}catch(e){}o=o.filter((x,k)=>Number.isInteger(x)&&x>1&&x<=NS&&o.indexOf(x)===k);for(let i=2;i<=NS;i++)if(!o.includes(i))o.push(i);return[1,...o];}
 function groupDocs(get){const g=new Map();for(const i of slotOrder()){const d=get(i);if(d&&d.name){const k=nrm(d.name);if(!g.has(k))g.set(k,[]);g.get(k).push(d);}}return g;}
 function subjCols(p=st.p){return[...groupDocs(i=>getDoc(i)).values()].map(L=>mergeDocs(L,p));}
@@ -179,7 +186,7 @@ function chartsHtml(cols,rs){const T=cols.map((d,j)=>[d,rs[j]]).filter(([d,r])=>
 
 const BC=["#8fd49a","#b3e0a0","#dbe9a0","#f6e39b","#f7c59a","#f1a7a7"];
 function mp(g,t,nm,p=st.p){const L=[];for(let i=1;i<=NS;i++){const d=docs[kk(g,t,p,i)];if(d&&d.name&&nrm(d.name)===nrm(nm))L.push(d);}if(!L.length)return"";const r=calc(mergeDocs(L,p),p);return r.n?r.mp:"";}
-function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&docs[k].name&&f(+m[2],+m[3])&&![...s].some(x=>nrm(x)===nrm(docs[k].name)))s.add(docs[k].name);}return[...s];}
+function names(f){const s=new Set();for(const k in docs){const m=k.match(/^(.+)_g(\d)([a-z]?)_t(\d)(?:_p\d)?_s\d+$/);if(m&&m[1]===PF()+st.y&&m[3]===trk(+m[2])&&docs[k].name&&f(+m[2],+m[4])&&![...s].some(x=>nrm(x)===nrm(docs[k].name)))s.add(docs[k].name);}return[...s];}
 const delta=(a,b)=>{if(a===""||b==="")return"";const x=(b-a)*100;return `<b style="color:var(--${x>=0?"okt":"bt"})">${x>=0?"▲":"▼"} ${Math.abs(x).toFixed(1)}</b>`;};
 function cmpTable(head,nms,cells){return nms.length?`<div class="sum"><table><tr><th>المادة</th>${head.map(x=>`<th>${x}</th>`).join("")}<th>الفرق</th></tr>${nms.map(n=>{const v=cells(n);return `<tr><td>${esc(n)}</td>${v.map(x=>`<td>${pc(x)}</td>`).join("")}<td>${delta(v.find(x=>x!==""),[...v].reverse().find(x=>x!==""))}</td></tr>`;}).join("")}</table></div>`:`<p class="mut">لا توجد بيانات بعد.</p>`;}
 function subjCmp(cols){if(cols.length<2)return"";const S=[...cols].sort((a,b)=>b[1].mp-a[1].mp),avg=S.reduce((s,x)=>s+x[1].mp,0)/S.length;
@@ -289,8 +296,9 @@ async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
  }catch(e){if(!e||e.code!=="declined")toast("تعذر التصدير"+(e&&(e.m||e.message)?": "+(e.m||e.message):""));}}
 app.addEventListener("click",e=>{const x=e.target.dataset.x;if(x)doExport(x);});
 document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const D=b.dataset;
- if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s]||(SCOPE&&SCOPE!=="all"&&s!==SCOPE))return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
- else if(D.g)st.g=+D.g;else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
+ if(D.s||D.gs){const s=D.s||D.gs;if(!SG[s]||(SCOPE&&SCOPE!=="all"&&s!==SCOPE))return;picked=true;if(D.gs)$("#gm").textContent="";if(s!==st.s){st.s=s;st.g=1;st.k="";if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",s);}catch(x){}}
+ else if(D.addsbj){const f=slotOrder().find(i=>i>1&&!getDoc(i).name);if(!f){toast("وصلتِ للحد الأقصى ("+NS+" مادة)");return;}st.v=f;renderTabs();renderView();setTimeout(()=>{const n=document.querySelector('[data-f="name"]');if(n)n.focus();},30);return;}
+ else if(D.g){st.g=+D.g;if(!TR(st.g))st.k="";}else if(D.k){st.k=D.k==="0"?"":D.k;}else if(D.t)st.t=+D.t;else if(D.p)st.p=+D.p;else if(D.v)st.v=isNaN(+D.v)?D.v:+D.v;else return;renderBars();renderView();});
 $("#yr").addEventListener("change",e=>{st.y=nz(e.target.value).replace(/\D/g,"")||"1448";e.target.value=st.y;renderBars();renderView();});
 const SB="https://geruvshyzwgjcmcakpfs.supabase.co",SK="sb_publishable_NSbjHh8mhylyHBDc6i5-GA_wvvE54gn";
 let CODE="",SCOPE=null,last=null,polling=null;try{CODE=localStorage.getItem("ra_code")||"";}catch(e){}
@@ -304,7 +312,7 @@ dl={save:async({filename,data})=>{const b=data instanceof Blob?data:new Blob([da
 function gate(msg){const g=$("#gate");g.style.display="flex";$("#gm").textContent=msg||"";$("#gc").value="";setTimeout(()=>$("#gc").focus(),50);}
 async function start(){if(!CODE)return gate();flash("جارٍ التحقق…");
  try{if(!(await rpc("ra_check",{c:CODE})))return gate("رمز الدخول غير صحيح");}catch(e){flash("تعذر الاتصال بالقاعدة — تأكدي من الإنترنت");setTimeout(start,8000);return;}
- try{SCOPE=await rpc("ra_scope",{c:CODE});}catch(e){SCOPE=null;}if(!SCOPE)return gate("رمز الدخول غير صحيح");if(SCOPE!=="all"&&st.s!==SCOPE){st.s=SCOPE;st.g=1;if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",st.s);}catch(e){}renderBars();
+ try{SCOPE=await rpc("ra_scope",{c:CODE});}catch(e){SCOPE=null;}if(!SCOPE)return gate("رمز الدخول غير صحيح");if(SCOPE!=="all"&&st.s!==SCOPE){st.s=SCOPE;st.g=1;st.k="";if(st.v!=="tch")st.v="sum";}try{localStorage.setItem("ra_stage",st.s);}catch(e){}renderBars();
  $("#gate").style.display="none";db={doc:p=>({set:d=>rpc("ra_save",{c:CODE,p_id:p.slice(8),p_data:d})})};
  flash("جارٍ تحميل البيانات…");try{await pull();flash("البيانات محفوظة على الإنترنت ✓");}catch(e){flash("تعذر تحميل البيانات");}
  renderTabs();if(!typing())renderView();
