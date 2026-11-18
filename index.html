@@ -208,7 +208,8 @@ function renderCmp(){const cols=[];subjCols().forEach(d=>{const r=calc(d);if(r.n
  <b>توزيع التقديرات (من عدد المختبرات)</b><div class="ch">${cols.map(([d,r])=>`<div class="br"><span>${esc(d.name)}</span><div class="tr">${r.cnt.map((c,k)=>c?`<i style="width:${c/r.n*100}%;background:${BC[k]}" title="${BN[k]}: ${c}">${c}</i>`:"").join("")}</div></div>`).join("")}</div>
  <div class="lg">${BN.map((n,k)=>`<span><u style="background:${BC[k]}"></u>${n}</span>`).join("")}</div>`;
  h+=`</div>${subjCmp(cols)}${secMatrix(cols)}<div class="card"><b>مقارنة الفصل الأول بالثاني (${PN[st.p]}) — ${GN[st.g]}</b> <span class="mut">(النسبة المئوية للمتوسط، والفرق بالنقاط المئوية)</span>${termCmpHtml()}</div>`;
- h+=`<div class="card"><b>مقارنة الصفوف (${PN[st.p]}) — الفصل ${TN[st.t]}</b> <span class="mut">(من الأول إلى الثالث؛ تُطابق المواد بالاسم نفسه)</span>${cmpTable(SG[st.s].gr,names((g,t)=>t===st.t),n=>[1,2,3].map(g=>mp(g,st.t,n)))}</div>`;
+ {const gs=trk(st.g)?[1,2,3].filter(g=>TR(g)):[1,2,3];
+ h+=`<div class="card"><b>مقارنة الصفوف (${PN[st.p]}) — الفصل ${TN[st.t]}</b> <span class="mut">(${gs.length<3?gs.map(g=>SG[st.s].gr[g-1]).join(" و")+" — "+trName(st.g):"من الأول إلى الثالث"}؛ تُطابق المواد بالاسم نفسه)</span>${cmpTable(gs.map(g=>SG[st.s].gr[g-1]),names((g,t)=>t===st.t&&gs.includes(g)),n=>gs.map(g=>mp(g,st.t,n)))}</div>`;}
  h+=`<div class="card"><b>مقارنة الفترات — ${GN[st.g]} — الفصل ${TN[st.t]}</b> <span class="mut">(الفترة الأولى ثم الثانية ثم النهائي؛ الفرق من أول فترة إلى آخرها)</span>${cmpTable([PN[1],PN[2],PN[3]],names((g,t)=>g===st.g&&t===st.t),n=>[1,2,3].map(q=>mp(st.g,st.t,n,q)))}</div>`;
  $("#app").innerHTML=h;}
 function legend(){return `<div class="card"><b>معايير التقدير</b><table style="margin-top:8px"><tr><th>التقدير</th><th>النسبة</th><th>مثال: من 20</th><th>مثال: من 40</th></tr>${BN.map((n,k)=>{const P=["90% فأكثر","80% - أقل من 90%","75% - أقل من 80%","70% - أقل من 75%","50% - أقل من 70%","أقل من 50%"][k],R=f=>{const b=bands(f);return k==0?`${b[0]} - ${f}`:k==5?`أقل من ${b[4]}`:`${b[k]} - أقل من ${b[k-1]}`};return `<tr><td>${n}</td><td>${P}</td><td>${R(20)}</td><td>${R(40)}</td></tr>`}).join("")}</table>
@@ -273,12 +274,21 @@ function showImp(){const d=getDoc(IMP.i),fm=docFM(d);let used=0;
  <div class="row"><button type="button" class="on" id="impok">استيراد</button><button type="button" id="impx">إلغاء</button></div></div>`;
  $("#impm").hidden=false;}
 $("#impm").addEventListener("click",e=>{if(e.target.id==="impx"||e.target.id==="impm"){$("#impm").hidden=true;IMP=null;return;}
- if(e.target.id!=="impok"||!IMP)return;const sel=[...document.querySelectorAll("[data-ic]")].map(s=>+s.value),pick=sel.filter(x=>x>=0);
+ if(!IMP)return;
+ if(e.target.id==="impcap"||e.target.id==="impkeep"){doImp(IMP.sel,e.target.id==="impcap");return;}
+ if(e.target.id==="impback"){showImp();return;}
+ if(e.target.id!=="impok")return;const sel=[...document.querySelectorAll("[data-ic]")].map(s=>+s.value),pick=sel.filter(x=>x>=0);
  if(!pick.length){$("#impe").textContent="اختاري فصلًا لعمود واحد على الأقل";return;}
  if(new Set(pick).size!==pick.length){$("#impe").textContent="اخترتِ الفصل نفسه لأكثر من عمود";return;}
- const i=IMP.i,id=key(i),cur=getDoc(i),d=docs[id]=docs[id]||{...blank(),name:cur.name,teacher:cur.teacher},sc=JSON.parse(d.sc);let n=0;
- sel.forEach((s,k)=>{if(s<0)return;const v=IMP.cols[k].v.slice(0,NR);sc[s]=Array.from({length:NR},(_,r)=>v[r]??"");n+=v.length;});
- d.sc=JSON.stringify(sc);sched(id);$("#impm").hidden=true;IMP=null;renderSubj(i);flash(`تم استيراد ${n} درجة ✓`);});
+ const fm=docFM(getDoc(IMP.i)),big=impBig(sel,fm);
+ if(big){IMP.sel=sel;$("#impm").innerHTML=`<div class="bx"><b>⚠️ درجات أكبر من الدرجة الكاملة</b><p style="margin:10px 0">في الملف <b style="color:var(--bt)">${big}</b> ${big===1?"درجة أكبر":big===2?"درجتان أكبر":big<=10?"درجات أكبر":"درجة أكبر"} من الدرجة الكاملة (${fm}).</p><p class="mut" style="margin:0">ماذا تريدين أن أفعل بها؟</p>
+ <div class="row" style="flex-direction:column"><button type="button" class="on" id="impcap">تحويلها كلها إلى ${fm}</button><button type="button" id="impkeep">أعدّلها بنفسي (تظهر بالأحمر)</button><button type="button" id="impback">رجوع</button></div></div>`;return;}
+ doImp(sel,false);});
+function impBig(sel,fm){let b=0;sel.forEach((s,k)=>{if(s<0)return;IMP.cols[k].v.slice(0,NR).forEach(x=>{if(Number(x)>fm)b++;});});return b;}
+function doImp(sel,cap){const i=IMP.i,id=key(i),cur=getDoc(i),d=docs[id]=docs[id]||{...blank(),name:cur.name,teacher:cur.teacher},sc=JSON.parse(d.sc),fm=docFM(cur);let n=0,big=0;
+ sel.forEach((s,k)=>{if(s<0)return;const v=IMP.cols[k].v.slice(0,NR).map(x=>{if(Number(x)>fm){big++;return cap?String(fm):x;}return x;});sc[s]=Array.from({length:NR},(_,r)=>v[r]??"");n+=v.length;});
+ d.sc=JSON.stringify(sc);sched(id);$("#impm").hidden=true;IMP=null;renderSubj(i);
+ flash(big&&cap?`تم استيراد ${n} درجة ✓ وتحويل ${big} إلى ${fm}`:big?`تم استيراد ${n} درجة — راجعي ${big} بالأحمر`:`تم استيراد ${n} درجة ✓`);}
 app.addEventListener("click",e=>{const b=e.target.closest("[data-clr]");if(!b)return;const i=+st.v;if(!i)return;const id=key(i),d=docs[id];
  if(!d||!JSON.parse(d.sc).some(c=>c.some(x=>nz(x)!==""))){toast("لا توجد درجات لمسحها");return;}
  if(!confirm(`مسح كل درجات «${getDoc(i).name||"المادة"}» في ${PN[st.p]}؟\nتبقى بيانات المادة الأخرى والفترات الأخرى كما هي.`))return;
