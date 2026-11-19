@@ -62,6 +62,7 @@ th{background:var(--hd);position:sticky;top:0;z-index:1}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 const NS=20,NC=5,NR=25;const defFM=p=>p==3?40:20,docFM=(d,p=st.p)=>+d.fm>0?+d.fm:defFM(p),bands=fm=>[.9,.8,.75,.7,.5,0].map(x=>Math.round(x*fm*100)/100);
 const BN=["ممتاز","جيد جدًا","جيد مرتفع","جيد","مقبول","ضعيف"];
@@ -314,10 +315,41 @@ function aoaOf(){if(st.v==="sum")return{title:`نتائج ${PN[st.p]} — ${GN[s
  for(let k=0;k<=last;k++)aoa.push([k+1,...sc.map(c=>num(c[k]??""))]);
  aoa.push([],["الإحصاءات"],...rows(r.fm).map(([l,f])=>[l,f(r)]),["متوسط الدرجات لإجمالي النتيجة من 100",d.avg||""],["فحص البيانات",r.msg]);
  return{title:`${d.name||"مادة "+i} — ${PN[st.p]} — ${GN[st.g]} — الفصل ${TN[st.t]}`,aoa};}
+async function wordForm(){if(typeof JSZip==="undefined")throw{m:"أداة Word لم تُحمَّل، تأكدي من الإنترنت ثم حدّثي الصفحة"};
+ const fin=st.p===3,res=await fetch(`forms/n${fin?41:40}.docx`,{cache:"no-cache"});if(!res.ok)throw{m:"تعذّر تحميل نموذج Word"};
+ const z=await JSZip.loadAsync(await res.arrayBuffer()),x=new DOMParser().parseFromString(await z.file("word/document.xml").async("string"),"application/xml");
+ const W="http://schemas.openxmlformats.org/wordprocessingml/2006/main",WP="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+ const kids=(el,n)=>Array.from(el.childNodes).filter(c=>c.namespaceURI===W&&c.localName===n),all=(el,n,ns=W)=>Array.from(el.getElementsByTagNameNS(ns,n));
+ const txt=el=>all(el,"t").map(t=>t.textContent).join("").trim(),mk=(n,a={})=>{const e=x.createElementNS(W,"w:"+n);for(const k in a)e.setAttributeNS(W,"w:"+k,a[k]);return e;};
+ const cols=subjCols().filter(d=>d.name),rs=cols.map(d=>calc(d)),stage=SG[st.s].l.replace(/^للمرحلة\s*/,"");
+ const val=(lb,d,r)=>{const L=lb.replace(/\s+/g," ");
+  if(/^المادة/.test(L))return d.name;if(L.includes("اسم المعلمة"))return d.teacher;if(L.includes("عدد طالبات"))return d.total||r.n;
+  if(L.includes("درجة كاملة")||L.includes("الدرجة الكاملة"))return r.full;if(L.includes("أعلى درجة"))return f2(r.max);if(L.includes("أدنى درجة"))return f2(r.min);
+  if(L.includes("الانحراف"))return f2(r.sd);if(L.includes("الضعف النوعي"))return pc(r.weak);if(L.includes("إجمالي"))return d.avg;
+  if(L.includes("النسبة المئوية"))return pc(r.mp);if(L.includes("متوسط"))return f2(r.mean);
+  if(L.includes("الحاصلات على")){const k=/ممتاز/.test(L)?0:/جد/.test(L)?1:/مرتفع/.test(L)?2:/مقبول/.test(L)?4:/ضعيف/.test(L)?5:/جيد/.test(L)?3:-1;return k<0?"":pc(r.pct[k]);}
+  return "";};
+ const put=(tc,v)=>{const p=kids(tc,"p")[0]||tc.appendChild(mk("p"));kids(p,"r").forEach(r=>r.remove());if(v===""||v==null)return;
+  const r=mk("r"),pr=mk("rPr");pr.appendChild(mk("rFonts",{ascii:"Traditional Arabic",hAnsi:"Traditional Arabic",cs:"Traditional Arabic"}));pr.appendChild(mk("sz",{val:"24"}));pr.appendChild(mk("szCs",{val:"24"}));pr.appendChild(mk("rtl"));
+  const t=mk("t");t.setAttributeNS("http://www.w3.org/XML/1998/namespace","xml:space","preserve");t.textContent=String(v);r.appendChild(pr);r.appendChild(t);p.appendChild(r);};
+ all(x,"txbxContent").forEach(tb=>{const T=all(tb,"t");let k=0;const fill=[TN[st.t],stage,GN[st.g]];let yr=false;
+  T.forEach(t=>{const s=t.textContent;if(/^\s*\.{3,}\s*$/.test(s)&&k<3){t.textContent=fill[k++];}else if(!yr&&/144/.test(s)){t.textContent=s.replace("144",st.y);yr=true;}});});
+ const body=all(x,"body")[0],sect=kids(body,"sectPr")[0],base=Array.from(body.childNodes).filter(n=>n!==sect);
+ const pages=Math.max(1,Math.ceil(cols.length/7));let did=1000;
+ for(let pg=0;pg<pages;pg++){let nodes=base;
+  if(pg){const br=mk("p"),rr=mk("r");rr.appendChild(mk("br",{type:"page"}));br.appendChild(rr);body.insertBefore(br,sect);
+   nodes=base.map(n=>{const c=n.cloneNode(true);body.insertBefore(c,sect);return c;});
+   nodes.forEach(n=>{if(n.nodeType!==1)return;all(n,"docPr",WP).forEach(e=>e.setAttribute("id",String(++did)));[n,...n.getElementsByTagName("*")].forEach(e=>{e.removeAttribute("w14:paraId");e.removeAttribute("w14:textId");});});}
+  const tbl=nodes.find(n=>n.nodeType===1&&n.namespaceURI===W&&n.localName==="tbl");if(!tbl)continue;
+  kids(tbl,"tr").forEach(tr=>{const tcs=kids(tr,"tc");if(tcs.length<2)return;const lb=txt(tcs[0]);
+   for(let j=1;j<tcs.length;j++){const c=pg*7+j-1;put(tcs[j],c<cols.length?val(lb,cols[c],rs[c]):"");}});}
+ z.file("word/document.xml",new XMLSerializer().serializeToString(x));
+ return await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});}
 function thtml(aoa){const w=Math.max(...aoa.map(r=>r.length));return `<table style="border-collapse:collapse;width:100%;font-size:13px">`+aoa.map((r,i)=>!r.length?`<tr><td colspan="${w}" style="height:10px"></td></tr>`:`<tr>`+Array.from({length:w},(_,j)=>`<td style="border:1px solid #999;padding:4px 6px;text-align:center;${j==0||(st.v==="sum"&&i==0)?"background:#eef4fb;font-weight:bold":""}">${esc(r[j]??"")}</td>`).join("")+`</tr>`).join("")+`</table>`;}
 async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
  try{
   if(kind==="xlsx"){if(typeof XLSX==="undefined")throw{m:"مكتبة Excel لم تُحمَّل"};const ws=XLSX.utils.aoa_to_sheet(aoa),wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};ws["!cols"]=[{wch:46}];XLSX.utils.book_append_sheet(wb,ws,"النتائج");await dl.save({filename:fn+".xlsx",data:XLSX.write(wb,{bookType:"xlsx",type:"array"})});}
+  else if(kind==="doc"&&st.v==="sum"){await dl.save({filename:fn+".docx",data:await wordForm()});}
   else if(kind==="doc"){const h=`<html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${esc(title)}</title></head><body dir="rtl" style="font-family:Arial"><h3 style="text-align:center">${esc(title)}</h3>${thtml(aoa)}</body></html>`;await dl.save({filename:fn+".doc",data:new Blob(["\ufeff"+h],{type:"application/msword"})});}
   else{if(typeof html2canvas==="undefined"||!window.jspdf)throw{m:"مكتبة PDF لم تُحمَّل"};
    const el=document.createElement("div");el.dir="rtl";el.style.cssText=`position:absolute;left:-10000px;top:0;width:${land?1100:720}px;background:#fff;color:#000;padding:16px;font-family:Arial,Tahoma,sans-serif`;
