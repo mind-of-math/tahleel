@@ -203,7 +203,7 @@ function termCmpHtml(){const ord=slotOrder().map(i=>nrm(getDoc(i).name)),nms=nam
  return chart+`<div class="sum"><table><tr><th>المادة</th><th>الفصل الأول</th><th>الفصل الثاني</th><th>الفرق</th></tr>${R.map(r=>`<tr><td>${esc(r.n)}</td><td>${pc(r.a)}</td><td>${pc(r.b)}</td><td>${delta(r.a,r.b)}</td></tr>`).join("")}
  <tr class="bst"><th>المتوسط العام للصف</th><td>${pc(avg("a"))}</td><td>${pc(avg("b"))}</td><td>${delta(avg("a"),avg("b"))}</td></tr></table></div><p class="mut">المتوسط العام يُحسب من المواد التي لها درجات في الفصلين معًا، لتكون المقارنة عادلة.</p>`;}
 function renderCmp(){const cols=[];subjCols().forEach(d=>{const r=calc(d);if(r.n)cols.push([d,r]);});
- let h=`<div class="card"><h3 style="margin-top:0">${GN[st.g]} — الفصل ${TN[st.t]} — ${PN[st.p]}</h3>`;
+ let h=`<div class="card"><h3 style="margin-top:0">${GN[st.g]} — الفصل ${TN[st.t]} — ${PN[st.p]}</h3>${cols.length?exportBar():""}`;
  if(!cols.length)h+=`<p class="mut">لا توجد درجات مدخلة لهذا الصف والفصل بعد.</p>`;
  else h+=`<b>النسبة المئوية لمتوسط الدرجات في كل مادة</b><div class="ch">${cols.map(([d,r])=>`<div class="br"><span>${esc(d.name)}</span><div class="tr"><i style="width:${Math.min(r.mp*100,100)}%"></i></div><b>${pc(r.mp)}</b></div>`).join("")}</div>
  <b>توزيع التقديرات (من عدد المختبرات)</b><div class="ch">${cols.map(([d,r])=>`<div class="br"><span>${esc(d.name)}</span><div class="tr">${r.cnt.map((c,k)=>c?`<i style="width:${c/r.n*100}%;background:${BC[k]}" title="${BN[k]}: ${c}">${c}</i>`:"").join("")}</div></div>`).join("")}</div>
@@ -346,7 +346,38 @@ async function wordForm(){if(typeof JSZip==="undefined")throw{m:"أداة Word �
  z.file("word/document.xml",new XMLSerializer().serializeToString(x));
  return await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});}
 function thtml(aoa){const w=Math.max(...aoa.map(r=>r.length));return `<table style="border-collapse:collapse;width:100%;font-size:13px">`+aoa.map((r,i)=>!r.length?`<tr><td colspan="${w}" style="height:10px"></td></tr>`:`<tr>`+Array.from({length:w},(_,j)=>`<td style="border:1px solid #999;padding:4px 6px;text-align:center;${j==0||(st.v==="sum"&&i==0)?"background:#eef4fb;font-weight:bold":""}">${esc(r[j]??"")}</td>`).join("")+`</tr>`).join("")+`</table>`;}
-async function doExport(kind){const{title,aoa,land}=aoaOf(),fn=fname(title);
+async function cmpCards(){const L=[...document.querySelectorAll("#app > .card")];const out=[];
+ for(const c of L){const cv=await html2canvas(c,{scale:2,backgroundColor:"#fff",ignoreElements:e=>e.classList&&e.classList.contains("xb")});out.push(cv);}return out;}
+function cmpAoa(){const aoa=[];document.querySelectorAll("#app > .card").forEach(c=>{
+ const t=c.querySelector("h3,b");if(aoa.length)aoa.push([]);aoa.push([t?t.textContent.trim():""]);
+ c.querySelectorAll(":scope > b, .ch, table").forEach(el=>{if(el.tagName==="B"){if(el!==t)aoa.push([el.textContent.trim()]);}
+  else if(el.classList.contains("ch"))el.querySelectorAll(".br").forEach(br=>{const n=br.querySelector("span"),v=br.querySelector(":scope > b");aoa.push([n?n.textContent.trim():"",v?v.textContent.trim():[...br.querySelectorAll("i")].map(i=>i.title||i.textContent).join(" | ")]);});
+  else el.querySelectorAll("tr").forEach(r=>aoa.push([...r.children].map(x=>x.textContent.trim())));});});return aoa;}
+async function cmpDocx(title,cvs){if(typeof JSZip==="undefined")throw{m:"أداة Word لم تُحمَّل"};const z=new JSZip(),PW=9777730,PH=6400000;let rels="",body="",id=0;
+ const ex=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+ body+=`<w:p><w:pPr><w:bidi/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:bCs/><w:sz w:val="32"/><w:szCs w:val="32"/><w:rtl/></w:rPr><w:t>${ex(title)}</w:t></w:r></w:p>`;
+ for(const cv of cvs){id++;const b64=cv.toDataURL("image/png").split(",")[1];z.file(`word/media/c${id}.png`,b64,{base64:true});rels+=`<Relationship Id="rI${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/c${id}.png"/>`;
+  let w=PW,h=Math.round(PW*cv.height/cv.width);if(h>PH){w=Math.round(w*PH/h);h=PH;}
+  body+=`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="160"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${w}" cy="${h}"/><wp:docPr id="${id}" name="chart${id}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="c${id}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rI${id}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;}
+ z.file("[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+ z.file("_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+ z.file("word/_rels/document.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels}</Relationships>`);
+ z.file("word/document.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:body>${body}<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="360" w:footer="360" w:gutter="0"/><w:bidi/></w:sectPr></w:body></w:document>`);
+ return await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});}
+async function cmpPdf(cvs){if(typeof html2canvas==="undefined"||!window.jspdf)throw{m:"مكتبة PDF لم تُحمَّل"};
+ const doc=new window.jspdf.jsPDF({orientation:"l",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),m=24,iw=W-2*m;let y=m,first=true;
+ for(const cv of cvs){let w=iw,h=cv.height*iw/cv.width;if(h>H-2*m){w=w*(H-2*m)/h;h=H-2*m;}
+  if(!first&&y+h>H-m){doc.addPage();y=m;}first=false;doc.addImage(cv.toDataURL("image/jpeg",.92),"JPEG",m+(iw-w)/2,y,w,h);y+=h+12;}
+ return doc.output("blob");}
+async function doExport(kind){
+ if(st.v==="cmp"){const title=`الرسوم والمقارنات — ${GN[st.g]} — الفصل ${TN[st.t]} — ${PN[st.p]} — ${st.y}ه`,fn=fname(title);
+  try{flash("جارٍ تجهيز الملف…");
+   if(kind==="xlsx"){if(typeof XLSX==="undefined")throw{m:"مكتبة Excel لم تُحمَّل"};const ws=XLSX.utils.aoa_to_sheet(cmpAoa()),wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};ws["!cols"]=[{wch:40},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,ws,"المقارنات");await dl.save({filename:fn+".xlsx",data:XLSX.write(wb,{bookType:"xlsx",type:"array"})});}
+   else{if(typeof html2canvas==="undefined")throw{m:"أداة التصوير لم تُحمَّل"};const cvs=await cmpCards();
+    if(kind==="doc")await dl.save({filename:fn+".docx",data:await cmpDocx(title,cvs)});else await dl.save({filename:fn+".pdf",data:await cmpPdf(cvs)});}
+   flash("تم التنزيل ✓");}catch(x){toast(x&&x.m?x.m:"تعذّر التصدير");}
+  return;}
+ const{title,aoa,land}=aoaOf(),fn=fname(title);
  try{
   if(kind==="xlsx"){if(typeof XLSX==="undefined")throw{m:"مكتبة Excel لم تُحمَّل"};const ws=XLSX.utils.aoa_to_sheet(aoa),wb=XLSX.utils.book_new();wb.Workbook={Views:[{RTL:true}]};ws["!cols"]=[{wch:46}];XLSX.utils.book_append_sheet(wb,ws,"النتائج");await dl.save({filename:fn+".xlsx",data:XLSX.write(wb,{bookType:"xlsx",type:"array"})});}
   else if(kind==="doc"&&st.v==="sum"){await dl.save({filename:fn+".docx",data:await wordForm()});}
